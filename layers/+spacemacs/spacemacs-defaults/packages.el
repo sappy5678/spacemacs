@@ -42,7 +42,6 @@
         (hi-lock :location built-in)
         (image-mode :location built-in)
         (imenu :location built-in)
-        (linum :location built-in :toggle (version< emacs-version "26"))
         (occur-mode :location built-in)
         (package-menu :location built-in)
         ;; page-break-lines is shipped with spacemacs core
@@ -59,6 +58,7 @@
         (visual-line-mode :location built-in)
         (whitespace :location built-in)
         (winner :location built-in)
+        (xref :location built-in)
         (zone :location built-in)))
 
 
@@ -144,9 +144,7 @@
     (evil-define-key 'normal dired-mode-map (kbd "N") 'evil-ex-search-previous))
   (when (eq 'hybrid dotspacemacs-editing-style)
     (evil-define-key 'normal dired-mode-map (kbd "n") 'evil-search-next)
-    (evil-define-key 'normal dired-mode-map (kbd "N") 'evil-search-previous))
-  (add-hook 'spacemacs-post-user-config-hook
-            'spacemacs/dired-remove-evil-mc-gr-which-key-entry))
+    (evil-define-key 'normal dired-mode-map (kbd "N") 'evil-search-previous)))
 
 (defun spacemacs-defaults/init-dired-x ()
   (use-package dired-x
@@ -407,7 +405,9 @@
       (add-to-list 'recentf-exclude
                    (recentf-expand-file-name spacemacs-cache-directory))
       (add-to-list 'recentf-exclude (recentf-expand-file-name package-user-dir))
-      (add-to-list 'recentf-exclude "COMMIT_EDITMSG\\'"))))
+      (add-to-list 'recentf-exclude "COMMIT_EDITMSG\\'")
+      (when custom-file
+        (add-to-list 'recentf-exclude custom-file)))))
 
 (defun spacemacs-defaults/init-savehist ()
   (use-package savehist
@@ -536,6 +536,11 @@
 
       (setq winner-boring-buffers
             (append winner-boring-buffers spacemacs/winner-boring-buffers)))))
+
+(defun spacemacs-defaults/init-xref ()
+  (evilified-state-evilify-map xref--xref-buffer-mode-map
+    :mode xref--xref-buffer-mode
+    :eval-after-load xref))
 
 (defun spacemacs-defaults/init-zone ()
   (use-package zone

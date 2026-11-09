@@ -1,6 +1,6 @@
 ;;; funcs.el --- react layer funcs file for Spacemacs. -*- lexical-binding: t -*-
 ;;
-;; Copyright (c) 2012-2021 Sylvain Benner & Contributors
+;; Copyright (c) 2012-2025 Sylvain Benner & Contributors
 ;;
 ;; Author: Muneeb Shaikh <muneeb@reversehack.in>
 ;; URL: https://github.com/syl20bnr/spacemacs
@@ -48,7 +48,7 @@
       (progn
         (unless javascript-lsp-linter
           (setq-local lsp-diagnostics-provider :none))
-        (lsp))
+        (lsp-deferred))
     (message "`lsp' layer is not installed, please add `lsp' layer to your dotfile.")))
 
 
@@ -70,8 +70,8 @@
            (goto-char (match-beginning 1))
            (let ((sexp (syntax-ppss)))
              ;; not inside string or comment
-             (not (or (nth 3 sexp)
-                      (nth 4 sexp))))))))
+             (not (or (ppss-string-terminator sexp)
+                      (ppss-comment-depth sexp))))))))
 
 (defun spacemacs//react-setup-yasnippet ()
   (yas-activate-extra-mode 'js-mode))

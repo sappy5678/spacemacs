@@ -1,6 +1,6 @@
-;;; layers.el --- Helm layer layers File for Spacemacs
+;;; layers.el --- Helm layer layers File for Spacemacs  -*- lexical-binding: t; -*-
 ;;
-;; Copyright (c) 2012-2021 Sylvain Benner & Contributors
+;; Copyright (c) 2012-2025 Sylvain Benner & Contributors
 ;;
 ;; Author: Sylvain Benner <sylvain.benner@gmail.com>
 ;; URL: https://github.com/syl20bnr/spacemacs
@@ -21,4 +21,4 @@
 ;; along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 
-(configuration-layer/declare-shadow-relation 'helm 'ivy)
+(configuration-layer/declare-shadow-relation 'helm 'ivy 'compleseus)

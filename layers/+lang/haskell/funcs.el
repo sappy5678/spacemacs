@@ -1,6 +1,6 @@
-;;; funcs.el --- Haskell Layer funcs File for Spacemacs
+;;; funcs.el --- Haskell Layer funcs File for Spacemacs  -*- lexical-binding: nil; -*-
 ;;
-;; Copyright (c) 2012-2021 Sylvain Benner & Contributors
+;; Copyright (c) 2012-2025 Sylvain Benner & Contributors
 ;;
 ;; Author: Sylvain Benner <sylvain.benner@gmail.com>
 ;; URL: https://github.com/syl20bnr/spacemacs
@@ -46,7 +46,7 @@
         ;; top-level code that registers a LSP server type. So we need to load it
         ;; directly and can't rely on it being autoloaded.
         (require 'lsp-haskell)
-        (lsp))
+        (lsp-deferred))
     (message "`lsp' layer is not installed, please add `lsp' layer to your dotfile.")))
 
 

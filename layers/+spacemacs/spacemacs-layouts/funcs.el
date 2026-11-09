@@ -1,6 +1,6 @@
 ;;; funcs.el --- Spacemacs Layouts Layer functions File -*- lexical-binding: t; -*-
 ;;
-;; Copyright (c) 2012-2021 Sylvain Benner & Contributors
+;; Copyright (c) 2012-2025 Sylvain Benner & Contributors
 ;;
 ;; Author: Sylvain Benner <sylvain.benner@gmail.com>
 ;; URL: https://github.com/syl20bnr/spacemacs
@@ -44,8 +44,8 @@
 (defun spacemacs//layout-wait-for-modeline (&rest _)
   "Assure the mode-line is loaded before restoring the layouts."
   (advice-remove 'persp-load-state-from-file 'spacemacs//layout-wait-for-modeline)
-  (when (and (configuration-layer/package-used-p 'spaceline)
-             (memq (spacemacs/get-mode-line-theme-name) '(spacemacs all-the-icons custom)))
+  (when (and (configuration-layer/layer-used-p 'spacemacs-modeline)
+             (spacemacs//enable-spaceline-p))
     (require 'spaceline-config)))
 
 (defun spacemacs//current-layout-name ()
@@ -83,7 +83,7 @@ Cancels autosave on exiting perspectives mode."
     (persp-switch spacemacs--last-selected-layout)))
 
 (defun spacemacs-layouts/non-restricted-buffer-list-helm ()
-  "Show all buffers accross all layouts."
+  "Show all buffers across all layouts."
   (interactive)
   (let ((helm-buffer-list-reorder-fn #'helm-buffers-reorder-buffer-list))
     (helm-mini)))
@@ -94,12 +94,20 @@ Cancels autosave on exiting perspectives mode."
     (ivy-switch-buffer)))
 
 (defun spacemacs-layouts//advice-with-persp-buffer-list (orig-fun &rest args)
-  "Advice to provide perp buffer list."
-  (with-persp-buffer-list () (apply orig-fun args)))
+  "Advise ORIG-FUN to make `buffer-list' only return buffers in the current layout.
+
+This is similar to `with-persp-buffer-list', but maintains the order of the list
+returned by `buffer-list'."
+  (if (fboundp 'persp-contain-buffer-p)
+      (cl-letf* ((orig-buffer-list (symbol-function 'buffer-list))
+                 ((symbol-function 'buffer-list)
+                  (lambda (&optional frame)
+                    (seq-filter #'persp-contain-buffer-p (funcall orig-buffer-list frame)))))
+        (apply orig-fun args))
+    (apply orig-fun args)))
 
 
 ;; Persp transient-state
-
 (defvar spacemacs--persp-display-buffers-func 'ignore
   "Function to display buffers in the perspective.")
 (defun spacemacs/persp-buffers ()
@@ -327,8 +335,8 @@ Available PROPS:
   (spacemacs//update-custom-layouts)
   (spacemacs/custom-layouts-transient-state/body))
 
-(defun spacemacs//custom-layouts-ms-documentation ()
-  "Return the docstring for the custom perspectives transient-state."
+(defun spacemacs//custom-layouts-ts-documentation ()
+  "Return the docstring for the custom perspectives transient state."
   (if spacemacs--custom-layout-alist
       (mapconcat (lambda (custom-persp)
                    (format "[%s] %s"
@@ -348,7 +356,7 @@ format so they are supported by the
              (func-name (spacemacs//custom-layout-func-name name)))
         (push (list binding func-name :exit t) bindings)))
     (eval `(spacemacs|define-transient-state custom-layouts
-             :doc (concat (spacemacs//custom-layouts-ms-documentation))
+             :doc (concat (spacemacs//custom-layouts-ts-documentation))
              :bindings
              ,@bindings))))
 
@@ -378,7 +386,7 @@ If perspective NAME does not already exist, create it and add any
 buffers that belong to the current buffer's project."
   (if (persp-with-name-exists-p name)
       (message "There is already a perspective named %s" name)
-    (if-let ((project (projectile-project-p)))
+    (if-let* ((project (projectile-project-p)))
         (spacemacs||switch-layout name
           :init
           (persp-add-buffer (projectile-project-buffers project)
@@ -511,6 +519,16 @@ perspectives does."
           (helm-quit-hook (append helm-quit-hook
                                   (lambda ()
                                     (persp-kill-without-buffers project)))))
+      ;; HACK Fixes the bug reported in
+      ;; https://github.com/syl20bnr/spacemacs/issues/17074#issuecomment-3134120413.
+      ;; `helm-projectile' is invoked as our `projectile-switch-project-action'.
+      ;; It tries to determine the project through `projectile-acquire-root'
+      ;; within `with-helm-current-buffer', but this fails for buffers that are
+      ;; not part of the project. As a workaround we preemptively switch to one of
+      ;; the project's buffers here.
+      (when (eq projectile-switch-project-action 'helm-projectile)
+        (let ((project-buffers (projectile-project-buffers (expand-file-name project))))
+          (switch-to-buffer (or (car project-buffers) (dired project)))))
       (projectile-switch-project-by-name project))))
 
 (defun spacemacs//helm-persp-switch-project-action-maker (project-action)
@@ -540,7 +558,7 @@ Run PROJECT-ACTION on project."
      :mode-line helm-read-file-name-mode-line-string
      :keymap (let ((map (make-sparse-keymap)))
                (define-key map
-                 (kbd "C-d") #'(lambda () (interactive)
+                 (kbd "C-d") (lambda () (interactive)
                                  (helm-exit-and-execute-action
                                   (lambda (project)
                                     (spacemacs||switch-project-persp project
@@ -701,11 +719,99 @@ STATE is a window-state object as returned by `window-state-get'."
 
 ;; Eyebrowse transient state
 
-(defun spacemacs/single-win-workspace ()
-  "Create a new single window workspace, and show the Spacemacs home buffer."
+(defun spacemacs//workspace-get-used-slots ()
+  (mapcar 'car (eyebrowse--get 'window-configs)))
+
+(defun spacemacs//workspace-next-free-slot ()
+  "Get the next free workspace slot."
+  (eyebrowse-free-slot (spacemacs//workspace-get-used-slots)))
+
+(defun spacemacs/clone-workspace ()
+  "Clone the current workspace."
   (interactive)
-  (let ((eyebrowse-new-workspace 'spacemacs/home))
-    (eyebrowse-create-window-config)))
+  (let ((eyebrowse-new-workspace nil) ; nil = clone current workspace
+        (current-slot (eyebrowse--get 'current-slot))
+        (next-free-slot (spacemacs//workspace-next-free-slot)))
+    (eyebrowse-switch-to-window-config next-free-slot)
+    (message "Workspace %s cloned to %s" current-slot next-free-slot)))
+
+(defun spacemacs/new-workspace (&optional slot)
+  "Create a new workspace, showing the Spacemacs home buffer.
+If a optional SLOT (number) was provided,
+then create the new workspace at that slot.
+Otherwise create it at the next free slot."
+  (let ((eyebrowse-new-workspace 'spacemacs/home)
+        (slot (or slot (spacemacs//workspace-next-free-slot))))
+    (eyebrowse-switch-to-window-config slot)
+    (message "Workspace %s created" slot)))
+
+(defun spacemacs/single-win-workspace ()
+  "Create a new single window workspace,
+showing the Spacemacs home buffer."
+  (interactive)
+  (spacemacs/new-workspace))
+
+(defun spacemacs/workspace-switch-or-create (slot)
+  "Given a workspace SLOT number.
+If SLOT is current, show a message.
+If SLOT exists, switch to it.
+Otherwise create a new workspace at the next free slot."
+  (let* ((slot-current-p (= slot (eyebrowse--get 'current-slot)))
+         (slot-exists-p (and (not slot-current-p)
+                             (memq slot (spacemacs//workspace-get-used-slots)))))
+    (cond (slot-current-p (message "Already on Workspace: %s" slot))
+          (slot-exists-p (eyebrowse-switch-to-window-config slot)
+                         (message "Workspace switched to: %s" slot))
+          (t (spacemacs/new-workspace slot)))))
+
+(defun spacemacs/eyebrowse-switch-to-window-config-0 ()
+  (interactive)
+  (spacemacs/workspace-switch-or-create 0))
+
+(defun spacemacs/eyebrowse-switch-to-window-config-1 ()
+  (interactive)
+  (spacemacs/workspace-switch-or-create 1))
+
+(defun spacemacs/eyebrowse-switch-to-window-config-2 ()
+  (interactive)
+  (spacemacs/workspace-switch-or-create 2))
+
+(defun spacemacs/eyebrowse-switch-to-window-config-3 ()
+  (interactive)
+  (spacemacs/workspace-switch-or-create 3))
+
+(defun spacemacs/eyebrowse-switch-to-window-config-4 ()
+  (interactive)
+  (spacemacs/workspace-switch-or-create 4))
+
+(defun spacemacs/eyebrowse-switch-to-window-config-5 ()
+  (interactive)
+  (spacemacs/workspace-switch-or-create 5))
+
+(defun spacemacs/eyebrowse-switch-to-window-config-6 ()
+  (interactive)
+  (spacemacs/workspace-switch-or-create 6))
+
+(defun spacemacs/eyebrowse-switch-to-window-config-7 ()
+  (interactive)
+  (spacemacs/workspace-switch-or-create 7))
+
+(defun spacemacs/eyebrowse-switch-to-window-config-8 ()
+  (interactive)
+  (spacemacs/workspace-switch-or-create 8))
+
+(defun spacemacs/eyebrowse-switch-to-window-config-9 ()
+  (interactive)
+  (spacemacs/workspace-switch-or-create 9))
+
+(defun spacemacs/eyebrowse-close-window-config ()
+  (interactive)
+  (let ((current-workspace (eyebrowse--get 'current-slot))
+        (last-workspace-p (= (length (eyebrowse--get 'window-configs)) 1)))
+    (if last-workspace-p
+        (message "The last workspace can not be closed")
+      (eyebrowse-close-window-config)
+      (message "Workspace %s closed" current-workspace))))
 
 (defun spacemacs//workspaces-ts-toggle-hint ()
   "Toggle the full hint docstring for the workspaces transient-state."
@@ -748,7 +854,7 @@ STATE is a window-state object as returned by `window-state-get'."
 
 (defun spacemacs//get-persp-workspace (&optional persp frame)
   "Get the correct workspace parameters for perspective.
-PERSP is the perspective, and defaults to the current perspective.
+PERSP is the perspective, and defaults to the default layout.
 FRAME is the frame where the parameters are expected to be used, and
 defaults to the current frame."
   (let ((param-names (if (display-graphic-p frame)
@@ -782,13 +888,14 @@ graphical frames, and one set for terminal frames."
     (--zip-with (set-persp-parameter it other persp)
                 param-names workspace-params)))
 
-(defun spacemacs/load-eyebrowse-for-perspective (type &optional frame)
+(defun spacemacs/load-eyebrowse-for-perspective (type &optional frame persp)
   "Load an eyebrowse workspace according to a perspective's parameters.
- FRAME's perspective is the perspective that is considered, defaulting to
- the current frame's perspective.
- If the perspective doesn't have a workspace, create one."
+If the perspective doesn't have a workspace, create one.
+
+See the hook `persp-activated-functions'."
   (when (eq type 'frame)
-    (let* ((workspace-params (spacemacs//get-persp-workspace (get-frame-persp frame) frame))
+    (let* ((workspace-params (spacemacs//get-persp-workspace
+                              (or persp (get-frame-persp frame)) frame))
            (window-configs (nth 0 workspace-params))
            (current-slot (nth 1 workspace-params))
            (last-slot (nth 2 workspace-params)))
@@ -834,16 +941,40 @@ FRAME defaults to the current frame."
                                   frame))
 
 (defun spacemacs//fixup-window-configs (orig-fn newname &optional unique)
-  "Update the buffer's name in the eyebrowse window-configs of any perspectives
-containing the buffer."
+  "Update the buffer's name in the eyebrowse window-configs of all perspectives."
   (let* ((old (buffer-name))
          (new (funcall orig-fn newname unique)))
-    (dolist (persp (persp--buffer-in-persps (current-buffer)))
+    (dolist (persp (persp-persps))
       (dolist (window-config
                (append (persp-parameter 'gui-eyebrowse-window-configs persp)
                        (persp-parameter 'term-eyebrowse-window-configs persp)))
         (eyebrowse--rename-window-config-buffers window-config old new)))
     new))
+
+
+
+;; consult compleseus stuff
+(defun spacemacs/compleseus-pers-switch-project (arg)
+  "Select a project layout using consult."
+  (interactive "P")
+  (let* ((current-project-maybe (if (projectile-project-p)
+                                    (abbreviate-file-name (projectile-project-root))
+                                  nil))
+         (project (completing-read
+                   "Switch to Project Perspective: "
+                   (if current-project-maybe
+                       (cons current-project-maybe projectile-known-projects)
+                     projectile-known-projects)
+                   nil
+                   nil
+                   nil
+                   nil
+                   current-project-maybe)))
+    (spacemacs||switch-project-persp project
+      (let ((projectile-switch-project-action (if (string= project current-project-maybe)
+                                                  (lambda () nil)
+                                                projectile-switch-project-action)))
+        (projectile-switch-project-by-name project arg)))))
 
 
 ;; layout local variables
@@ -862,14 +993,14 @@ Accepts a list of VARIABLE, DEFAULT-VALUE pairs.
                                     (-map 'car
                                           spacemacs--layout-local-variables))))
     ;; save the current layout
-    (spacemacs-ht-set! spacemacs--layout-local-map
-             (spacemacs//current-layout-name)
+    (puthash (spacemacs//current-layout-name)
              (--map (cons it (symbol-value it))
-                    layout-local-vars))
+                    layout-local-vars)
+             spacemacs--layout-local-map)
     ;; load the default values into the new layout
     (--each layout-local-vars
       (set it (alist-get it spacemacs--layout-local-variables)))
     ;; override with the previously bound values for the new layout
-    (--when-let (spacemacs-ht-get spacemacs--layout-local-map persp-name)
+    (--when-let (gethash persp-name spacemacs--layout-local-map)
       (-each it
         (-lambda ((var . val)) (set var val))))))

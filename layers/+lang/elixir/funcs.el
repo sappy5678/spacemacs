@@ -1,6 +1,6 @@
-;;; funcs.el --- Elixir Layer functions File for Spacemacs
+;;; funcs.el --- Elixir Layer functions File for Spacemacs  -*- lexical-binding: nil; -*-
 ;;
-;; Copyright (c) 2012-2021 Sylvain Benner & Contributors
+;; Copyright (c) 2012-2025 Sylvain Benner & Contributors
 ;;
 ;; Author: Sylvain Benner <sylvain.benner@gmail.com>
 ;; URL: https://github.com/syl20bnr/spacemacs
@@ -55,7 +55,7 @@
 (defun spacemacs//elixir-setup-lsp ()
   "Setup lsp backend."
   (if (configuration-layer/layer-used-p 'lsp)
-      (progn (add-to-list 'exec-path elixir-ls-path) (lsp))
+      (progn (add-to-list 'exec-path elixir-ls-path) (lsp-deferred))
     (message "`lsp' layer is not installed, please add `lsp' layer to your dotfile.")))
 
 (defun spacemacs//elixir-setup-lsp-dap ()

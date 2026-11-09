@@ -1,6 +1,6 @@
-;;; funcs.el --- Julia Layer functions File for Spacemacs
+;;; funcs.el --- Julia Layer functions File for Spacemacs  -*- lexical-binding: nil; -*-
 ;;
-;; Copyright (c) 2012-2021 Sylvain Benner & Contributors
+;; Copyright (c) 2012-2025 Sylvain Benner & Contributors
 ;;
 ;; Author: Adam Beckmeyer <adam_git@thebeckmeyers.xyz>
 ;; URL: https://github.com/syl20bnr/spacemacs
@@ -38,7 +38,7 @@
 (defun spacemacs//julia-setup-lsp ()
   "Start lsp-mode and configure for buffer."
   (if (configuration-layer/layer-used-p 'lsp)
-      (lsp)
+      (lsp-deferred)
     (message "`lsp' layer is not installed, please add `lsp' layer to your dotfile.")))
 
 

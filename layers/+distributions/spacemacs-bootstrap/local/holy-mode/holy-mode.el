@@ -1,6 +1,6 @@
-;;; holy-mode.el --- Enter the church of Emacs
+;;; holy-mode.el --- Enter the church of Emacs  -*- lexical-binding: t; -*-
 
-;; Copyright (c) 2015-2020 Sylvain Benner
+;; Copyright (c) 2015-2025 Sylvain Benner
 ;;
 ;; Author: Sylvain Benner <sylvain.benner@gmail.com>
 ;; Keywords: convenience editing
@@ -28,23 +28,19 @@
 
 ;;; Code:
 
-(defadvice evil-insert-state (around holy-insert-to-emacs-state disable)
-  "Forces Emacs state."
-  (if (equal -1 (ad-get-arg 0))
-      ad-do-it
+(require 'evil)
+
+(defun holy-mode--override-with-emacs-state (f &optional arg &rest args)
+  "Advice around some Evil states to force Emacs state."
+  (if (equal -1 arg)
+      (apply f arg args)
     (evil-emacs-state)))
 
-(defadvice evil-motion-state (around holy-motion-to-emacs-state disable)
-  "Forces Emacs state."
-  (if (equal -1 (ad-get-arg 0))
-      ad-do-it
-    (evil-emacs-state)))
-
-(defadvice evil-normal-state (around holy-normal-to-emacs-state disable)
-  "Forces Emacs state."
-  (if (equal -1 (ad-get-arg 0))
-      ad-do-it
-    (evil-emacs-state)))
+(defconst holy-mode--overridden-states
+  (mapcar
+   (lambda (state) (intern (format "evil-%s-state" state)))
+   '(insert motion normal))
+  "List of Evil state functions that `holy-mode' will override with `evil-emacs-state'.")
 
 ;;;###autoload
 (define-minor-mode holy-mode
@@ -61,14 +57,10 @@ The `insert state' is replaced by the `emacs state'."
 (defun in-nomine-patris-et-filii-et-spiritus-sancti ()
   "Enter the church of Emacs (wash your hands)."
   ;; make all buffers' initial state emacs
-  (push '("." . emacs) evil-buffer-regexps)
+  (add-to-list 'evil-buffer-regexps '("." . emacs))
   ;; replace evil states by `emacs state'
-  (ad-enable-advice 'evil-insert-state 'around 'holy-insert-to-emacs-state)
-  (ad-enable-advice 'evil-motion-state 'around 'holy-motion-to-emacs-state)
-  (ad-enable-advice 'evil-normal-state 'around 'holy-normal-to-emacs-state)
-  (ad-activate 'evil-insert-state)
-  (ad-activate 'evil-motion-state)
-  (ad-activate 'evil-normal-state)
+  (dolist (state holy-mode--overridden-states)
+    (advice-add state :around #'holy-mode--override-with-emacs-state))
   ;; key bindings hooks for dynamic switching of editing styles
   (run-hook-with-args 'spacemacs-editing-style-hook 'emacs)
   ;; initiate `emacs state' and enter the church
@@ -79,12 +71,8 @@ The `insert state' is replaced by the `emacs state'."
   ;; restore defaults
   (setq evil-buffer-regexps (delete '("." . emacs) evil-buffer-regexps))
   ;; restore evil states
-  (ad-disable-advice 'evil-insert-state 'around 'holy-insert-to-emacs-state)
-  (ad-disable-advice 'evil-motion-state 'around 'holy-motion-to-emacs-state)
-  (ad-disable-advice 'evil-normal-state 'around 'holy-normal-to-emacs-state)
-  (ad-activate 'evil-insert-state)
-  (ad-activate 'evil-motion-state)
-  (ad-activate 'evil-normal-state)
+  (dolist (state holy-mode--overridden-states)
+    (advice-remove state #'holy-mode--override-with-emacs-state))
   ;; restore key bindings
   (run-hook-with-args 'spacemacs-editing-style-hook 'vim)
   ;; restore the states
@@ -95,6 +83,7 @@ The `insert state' is replaced by the `emacs state'."
   (dolist (buffer (buffer-list))
     (with-current-buffer buffer
       (cond
+       ((not evil-local-mode))
        ((eq 'emacs style) (evil-emacs-state))
        ((and (eq 'vim style)
              (eq 'emacs evil-state))
@@ -102,3 +91,6 @@ The `insert state' is replaced by the `emacs state'."
          ((memq major-mode evil-evilified-state-modes) (evil-evilified-state))
          ((memq major-mode evil-motion-state-modes) (evil-motion-state))
          (t (evil-normal-state))))))))
+
+(provide 'holy-mode)
+;;; holy-mode.el ends here

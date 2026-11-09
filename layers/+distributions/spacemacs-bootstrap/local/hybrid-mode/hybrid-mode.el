@@ -1,6 +1,6 @@
-;;; hybrid-mode.el --- Put one foot in the church of Emacs
+;;; hybrid-mode.el --- Put one foot in the church of Emacs  -*- lexical-binding: t; -*-
 
-;; Copyright (c) 2012-2021 Sylvain Benner & Contributors
+;; Copyright (c) 2012-2025 Sylvain Benner & Contributors
 ;;
 ;; Authors: Justin Burkett <justin@burkett.cc>
 ;;          Chris Ewald <chrisewald@gmail.com>
@@ -32,33 +32,25 @@
 (require 'evil)
 
 ;;;###autoload
-(defcustom hybrid-style-default-state
-  (spacemacs|dotspacemacs-backward-compatibility
-   hybrid-mode-default-state normal)
+(defcustom hybrid-style-default-state 'normal
   "Value of `evil-default-state' for hybrid-mode."
   :group 'spacemacs
   :type 'symbol)
 
 ;;;###autoload
-(defcustom hybrid-style-enable-hjkl-bindings
-  (spacemacs|dotspacemacs-backward-compatibility
-   hybrid-mode-enable-hjkl-bindings nil)
+(defcustom hybrid-style-enable-hjkl-bindings nil
   "If non-nil then packages configuration should enable hjkl navigation."
   :group 'spacemacs
   :type 'boolean)
 
 ;;;###autoload
-(defcustom hybrid-style-enable-evilified-state
-  (spacemacs|dotspacemacs-backward-compatibility
-   hybrid-mode-enable-evilified-state t)
+(defcustom hybrid-style-enable-evilified-state t
   "If non-nil then evilified states is enabled in buffer supporting it."
   :group 'spacemacs
   :type 'boolean)
 
 ;;;###autoload
-(defcustom hybrid-style-use-evil-search-module
-  (spacemacs|dotspacemacs-backward-compatibility
-   hybrid-mode-use-evil-search-module nil)
+(defcustom hybrid-style-use-evil-search-module nil
   "If non-nil then use evil own search module which is closer to Vim search
 behavior (for instance it support C-r pasting)."
   :group 'spacemacs
@@ -67,16 +59,16 @@ behavior (for instance it support C-r pasting)."
 (defvar hybrid-mode-default-state-backup evil-default-state
   "Backup of `evil-default-state'.")
 
-(defadvice evil-insert-state (around hybrid-insert-to-hybrid-state disable)
-  "Forces Hybrid state."
+(defun hybrid-insert-to-hybrid-state (f &optional arg)
+  "Advice around `evil-insert-state' to force Hybrid state."
   (evil-hybrid-state))
 
-(defadvice evil-evilified-state (around hybrid-evilified-to-hybrid-state disable)
-  "Forces Hybrid state."
-  (if (equal -1 (ad-get-arg 0))
-      ad-do-it
+(defun hybrid-evilified-to-hybrid-state (f &optional arg)
+  "Advice around `evil-evilified-state' to force Hybrid state."
+  (if (equal -1 arg)
+      (funcall f arg)
     (if hybrid-style-enable-evilified-state
-        ad-do-it
+        (funcall f arg)
       ;; seems better to set the emacs state instead of hybrid for evilified
       ;; buffers
       (evil-emacs-state))))
@@ -96,12 +88,10 @@ behavior (for instance it support C-r pasting)."
   (setq hybrid-mode-default-state-backup evil-default-state
         evil-default-state hybrid-style-default-state)
   ;; replace evil states by `hybrid state'
-  (ad-enable-advice 'evil-insert-state
-                    'around 'hybrid-insert-to-hybrid-state)
-  (ad-enable-advice 'evil-evilified-state
-                    'around 'hybrid-evilified-to-hybrid-state)
-  (ad-activate 'evil-insert-state)
-  (ad-activate 'evil-evilified-state)
+  (advice-add 'evil-insert-state
+              :around #'hybrid-insert-to-hybrid-state)
+  (advice-add 'evil-evilified-state
+              :around #'hybrid-evilified-to-hybrid-state)
   ;; key bindings hooks for dynamic switching of editing styles
   (run-hook-with-args 'spacemacs-editing-style-hook 'hybrid)
   ;; initiate `hybrid state'
@@ -111,12 +101,10 @@ behavior (for instance it support C-r pasting)."
   "Disable the hybrid editing style (reverting to 'vim style)."
   (setq evil-default-state hybrid-mode-default-state-backup)
   ;; restore evil states
-  (ad-disable-advice 'evil-insert-state
-                     'around 'hybrid-insert-to-hybrid-state)
-  (ad-disable-advice 'evil-evilified-state
-                     'around 'hybrid-evilified-to-hybrid-state)
-  (ad-activate 'evil-insert-state)
-  (ad-activate 'evil-evilified-state)
+  (advice-remove 'evil-insert-state
+                 #'hybrid-insert-to-hybrid-state)
+  (advice-remove 'evil-evilified-state
+                 #'hybrid-evilified-to-hybrid-state)
   ;; restore key bindings
   (run-hook-with-args 'spacemacs-editing-style-hook 'vim)
   ;; restore the states
@@ -166,6 +154,7 @@ behavior (for instance it support C-r pasting)."
   (dolist (buffer (buffer-list))
     (with-current-buffer buffer
       (cond
+       ((not evil-local-mode))
        ((eq 'hybrid style)
         (if (memq major-mode evil-evilified-state-modes)
             (evil-evilified-state)
@@ -179,3 +168,4 @@ behavior (for instance it support C-r pasting)."
          (t (evil-normal-state))))))))
 
 (provide 'hybrid-mode)
+;;; hybrid-mode.el ends here

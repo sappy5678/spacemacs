@@ -1,6 +1,6 @@
-;;; keybindings.el --- Version control keybindings
+;;; keybindings.el --- Version control keybindings  -*- lexical-binding: nil; -*-
 ;;
-;; Copyright (c) 2012-2021 Sylvain Benner & Contributors
+;; Copyright (c) 2012-2025 Sylvain Benner & Contributors
 ;;
 ;; Author: Sylvain Benner <sylvain.benner@gmail.com>
 ;; URL: https://github.com/syl20bnr/spacemacs
@@ -29,10 +29,10 @@
  [_n_]^^^^      next hunk            [_w_/_u_]^^    stage/unstage in current file     [_z_] recenter
  [_N_/_p_]^^    previous hunk        [_c_/_C_]^^    commit with popup/direct commit   [_q_] quit
  [_r_/_s_/_h_]  revert/stage/show    [_f_/_F_/_P_]  fetch/pull/push popup
- [_t_]^^^^      toggle diff signs    [_l_/_D_]^^    log/diff popup"
+ [_t_]^^^^      toggle diff signs    [_l_/_d_/_D_]  log/ediff/diff popup"
   :on-enter (spacemacs/vcs-enable-margin)
   :bindings
-  ("C" magit-commit :exit t)
+  ("C" magit-commit-create :exit t)
   ("d" magit-ediff :exit t)
   ("D" magit-diff-unstaged :exit t)
   ("F" magit-pull :exit t)
@@ -40,8 +40,8 @@
   ("c" magit-commit :exit t)
   ("f" magit-fetch :exit t)
   ("l" magit-log :exit t)
-  ("u" magit-unstage-file)
-  ("w" magit-stage-file)
+  ("u" magit-unstage-files)
+  ("w" magit-stage-files)
   ("n" spacemacs/vcs-next-hunk)
   ("N" spacemacs/vcs-previous-hunk)
   ("p" spacemacs/vcs-previous-hunk)

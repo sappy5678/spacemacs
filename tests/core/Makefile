@@ -1,6 +1,6 @@
 ## Makefile --- Spacemacs Core
 ##
-## Copyright (c) 2012-2021 Sylvain Benner & Contributors
+## Copyright (c) 2012-2025 Sylvain Benner & Contributors
 ##
 ## Author: Sylvain Benner <sylvain.benner@gmail.com>
 ## URL: https://github.com/syl20bnr/spacemacs
@@ -20,17 +20,11 @@
 ## You should have received a copy of the GNU General Public License
 ## along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-TEST_DIR := $(shell dirname $(realpath $(lastword $(MAKEFILE_LIST))))
+TEST_DIR := $(shell dirname "$(realpath $(lastword $(MAKEFILE_LIST)))" \
+	| sed 's/ /\\ /g')
 
-LOAD_FILES = core/core-versions.el core/core-load-paths.el
-UNIT_TEST_FILES = \
-  core-configuration-layer-utest.el \
-  core-spacebind-utest.el \
-  core-funcs-utest.el
-FUNC_TEST_FILES = \
-  core-spacemacs-ftest.el \
-  core-spacemacs-buffer-ftest.el \
-  core-configuration-layer-ftest.el \
-  core-release-management-ftest.el
+LOAD_FILES = early-init.el init.el core/core-versions.el core/core-load-paths.el
+UNIT_TEST_FILES = $(wildcard *-utest.el)
+FUNC_TEST_FILES = $(wildcard *-ftest.el)
 
 include ../../spacemacs.mk

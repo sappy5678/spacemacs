@@ -1,6 +1,6 @@
-;;; config.el --- ocaml Layer Configuration File for Spacemacs
+;;; config.el --- ocaml Layer Configuration File for Spacemacs  -*- lexical-binding: nil; -*-
 ;;
-;; Copyright (c) 2012-2021 Sylvain Benner & Contributors
+;; Copyright (c) 2012-2025 Sylvain Benner & Contributors
 ;;
 ;; Author: Sylvain Benner <sylvain.benner@gmail.com>
 ;; URL: https://github.com/syl20bnr/spacemacs
@@ -25,5 +25,6 @@
 
 (spacemacs|define-jump-handlers tuareg-mode)
 
-(defvar ocaml-format-before-save nil
+(define-obsolete-variable-alias 'ocaml-format-before-save 'ocaml-format-on-save "May 2021")
+(defvar ocaml-format-on-save nil
   "If non-nil, ocamlformat before saving.")

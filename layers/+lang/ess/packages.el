@@ -1,6 +1,6 @@
-;;; packages.el --- ESS (R) Layer packages File for Spacemacs
+;;; packages.el --- ESS (R) Layer packages File for Spacemacs  -*- lexical-binding: nil; -*-
 ;;
-;; Copyright (c) 2012-2021 Sylvain Benner & Contributors
+;; Copyright (c) 2012-2025 Sylvain Benner & Contributors
 ;;
 ;; Author: Sylvain Benner <sylvain.benner@gmail.com>
 ;; URL: https://github.com/syl20bnr/spacemacs
@@ -50,62 +50,32 @@
   (spacemacs/enable-flycheck 'ess-r-mode))
 
 (defun ess/init-ess ()
-  (use-package ess-site
-    :mode (("\\.sp\\'"           . S-mode)
-           ("/R/.*\\.q\\'"       . R-mode)
-           ("\\.[qsS]\\'"        . S-mode)
-           ("\\.ssc\\'"          . S-mode)
-           ("\\.SSC\\'"          . S-mode)
-           ("\\.[rR]\\'"         . R-mode)
-           ("\\.[rR]nw\\'"       . Rnw-mode)
-           ("\\.[sS]nw\\'"       . Snw-mode)
-           ("\\.[rR]profile\\'"  . R-mode)
-           ("NAMESPACE\\'"       . R-mode)
-           ("CITATION\\'"        . R-mode)
-           ("\\.omg\\'"          . omegahat-mode)
-           ("\\.hat\\'"          . omegahat-mode)
-           ("\\.lsp\\'"          . XLS-mode)
-           ("\\.do\\'"           . STA-mode)
-           ("\\.ado\\'"          . STA-mode)
-           ("\\.[Ss][Aa][Ss]\\'" . SAS-mode)
-           ("\\.[Ss]t\\'"        . S-transcript-mode)
-           ("\\.Sout"            . S-transcript-mode)
-           ("\\.[Rr]out"         . R-transcript-mode)
-           ("\\.Rd\\'"           . Rd-mode)
-           ("\\.[Bb][Uu][Gg]\\'" . ess-bugs-mode)
-           ("\\.[Bb][Oo][Gg]\\'" . ess-bugs-mode)
-           ("\\.[Bb][Mm][Dd]\\'" . ess-bugs-mode)
-           ("\\.[Jj][Aa][Gg]\\'" . ess-jags-mode)
-           ("\\.[Jj][Oo][Gg]\\'" . ess-jags-mode)
-           ("\\.[Jj][Mm][Dd]\\'" . ess-jags-mode))
-    :commands (R stata julia SAS ess-julia-mode)
+  (use-package ess
+    :defer t
     :init
-    (progn
-      (setq ess-use-company nil
-            ess-offset-continued 'straight
-            ess-nuke-trailing-whitespace-p t
-            ess-default-style 'DEFAULT)
+    (setq ess-use-company nil
+          ess-offset-continued 'straight
+          ess-nuke-trailing-whitespace-p t
+          ess-default-style 'DEFAULT)
 
-      ;; add support for evil states
-      (evil-set-initial-state 'ess-help-mode 'motion)
+    ;; add support for evil states
+    (evil-set-initial-state 'ess-help-mode 'motion)
 
-      (spacemacs/register-repl 'ess-site #'spacemacs/ess-start-repl)
+    (spacemacs/register-repl 'ess-site #'spacemacs/ess-start-repl)
 
-      (add-hook 'ess-r-mode-hook #'spacemacs//ess-may-setup-r-lsp)
-      (add-hook 'inferior-ess-mode-hook
-                'spacemacs//ess-fix-read-only-inferior-ess-mode)
+    (add-hook 'ess-r-mode-hook #'spacemacs//ess-may-setup-r-lsp)
+    (add-hook 'inferior-ess-mode-hook
+              'spacemacs//ess-fix-read-only-inferior-ess-mode)
 
-      (with-eval-after-load 'ess-julia
-        (spacemacs/ess-bind-keys-for-julia))
-      (with-eval-after-load 'ess-r-mode
-        (spacemacs/ess-bind-keys-for-r)
-        (unless (eq ess-r-backend 'lsp)
-          (spacemacs/declare-prefix-for-mode 'ess-r-mode "mg" "goto")
-          (define-key ess-doc-map "h" #'ess-display-help-on-object)))
-      (with-eval-after-load 'ess-inf-mode
-        (spacemacs/ess-bind-keys-for-inferior)))
     :config
-    (define-key ess-mode-map (kbd "<s-return>") #'ess-eval-line))
+    (require 'ess-site)                 ; ensure fully loaded for config to work
+    (define-key ess-mode-map (kbd "s-<return>") #'ess-eval-line)
+    (spacemacs/ess-bind-keys-for-julia)
+    (spacemacs/ess-bind-keys-for-r)
+    (unless (eq ess-r-backend 'lsp)
+      (spacemacs/declare-prefix-for-mode 'ess-r-mode "mg" "goto")
+      (define-key ess-doc-map "h" #'ess-display-help-on-object))
+    (spacemacs/ess-bind-keys-for-inferior))
 
   ;; xref integration added with #96ef5a6
   (spacemacs|define-jump-handlers ess-mode 'xref-find-definitions))

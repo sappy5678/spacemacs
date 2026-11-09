@@ -1,6 +1,6 @@
-;;; funcs.el --- Dart Layer functions File for Spacemacs
+;;; funcs.el --- Dart Layer functions File for Spacemacs  -*- lexical-binding: nil; -*-
 ;;
-;; Copyright (c) 2012-2021 Sylvain Benner & Contributors
+;; Copyright (c) 2012-2025 Sylvain Benner & Contributors
 ;;
 ;; Author: Sylvain Benner <sylvain.benner@gmail.com>
 ;; URL: https://github.com/syl20bnr/spacemacs
@@ -27,4 +27,4 @@
 (defun spacemacs//dart-setup-backend ()
   (pcase dart-backend
     ('analyzer (dart-server))
-    ('lsp (lsp))))
+    ('lsp (lsp-deferred))))

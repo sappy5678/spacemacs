@@ -11,6 +11,7 @@
 - [[#important-note][Important Note]]
 - [[#install][Install]]
   - [[#layer][Layer]]
+  - [[#todo-dependencies][=TODO= dependencies]]
   - [[#agenda-notifications][Agenda notifications]]
   - [[#agenda-recommendations][Agenda recommendations]]
   - [[#github-support][GitHub support]]
@@ -26,16 +27,19 @@
   - [[#project-support][Project support]]
   - [[#org-brain-support][Org-brain support]]
   - [[#org-roam-support][Org-roam support]]
-    - [[#org-roam-server-support][Org-roam-server support]]
+    - [[#org-roam-ui-support][Org-roam-ui support]]
     - [[#org-roam-protocol-support][Org-roam-protocol support]]
   - [[#mode-line-support][Mode line support]]
   - [[#sticky-header-support][Sticky header support]]
   - [[#epub-support][Epub support]]
   - [[#jira-support][Jira support]]
   - [[#valign-support][Valign support]]
+  - [[#org-modern-support][Org-modern support]]
   - [[#org-appear-support][Org-appear support]]
+  - [[#transclusion-support][Transclusion support]]
   - [[#verb-support][Verb support]]
   - [[#asciidoc-support][AsciiDoc support]]
+  - [[#mermaid-support][Mermaid support]]
   - [[#spacemacs-layout-integration][Spacemacs layout integration]]
 - [[#key-bindings][Key bindings]]
   - [[#starting-org-mode][Starting org-mode]]
@@ -57,7 +61,7 @@
   - [[#pomodoro][Pomodoro]]
   - [[#presentation][Presentation]]
   - [[#helm-org-rifle][Helm-org-rifle]]
-  - [[#org-projectile][Org-projectile]]
+  - [[#org-project-capture][Org-project-capture]]
   - [[#org-journal][Org-journal]]
   - [[#org-brain][Org-brain]]
     - [[#application-bindings][Application bindings]]
@@ -68,7 +72,9 @@
     - [[#verb-mode-bindings][Verb-mode bindings]]
     - [[#verb-response-body-mode-bindings][Verb-response-body-mode bindings]]
     - [[#verb-response-headers-mode-bindings][Verb-response-headers-mode bindings]]
+  - [[#org-modern][Org-modern]]
   - [[#org-roam][Org-roam]]
+  - [[#transclusion][Transclusion]]
 
 * Description
 This layer enables [[http://orgmode.org/][org mode]] for Spacemacs.
@@ -79,25 +85,26 @@ This layer enables [[http://orgmode.org/][org mode]] for Spacemacs.
 - A [[https://cirillocompany.de/pages/pomodoro-technique][pomodoro method]] integration via [[https://github.com/lolownia/org-pomodoro][org-pomodoro]]
 - Presentation mode via [[https://github.com/rlister/org-present][org-present]]
 - Insertion of images via [[https://github.com/abo-abo/org-download][org-download]]
-- Project-specific TODOs via [[https://github.com/IvanMalison/org-projectile][org-projectile]]
+- Project-specific TODOs via [[https://github.com/colonelpanic8/org-project-capture][org-project-capture]]
 - Easy insert of URLs from clipboard with org format via [[https://github.com/rexim/org-cliplink][org-cliplink]]
 - Rich insert of code (into a source block with highlighting, and a link) from other buffers via [[https://github.com/unhammer/org-rich-yank][org-rich-yank]]
 - Pixel-perfect visual alignment for Org and Markdown tables via [[https://github.com/casouri/valign][valign]]
+- Text transclusion via [[https://nobiot.github.io/org-transclusion][org-transclusion]]
 
 * BibTeX
 For more extensive support of references through BibTeX files, have a look at
 the [[https://github.com/syl20bnr/spacemacs/blob/develop/layers/+lang/bibtex/README.org][BibTeX layer]].
 
 * Important Note
-Since version 0.104, spacemacs uses the =org= version from the =org= ELPA
-repository instead of the one shipped with emacs. Then, any =org= related code
-should not be loaded before =dotspacemacs/user-config=, otherwise both versions
-will be loaded and will conflict.
+Spacemacs uses the =org= version from the ELPA repository
+instead of the one shipped with emacs. Then, any =org= related code should not
+be loaded before =dotspacemacs/user-config=, otherwise both versions will be
+loaded and will conflict.
 
 Because of autoloading, calling to =org= functions will trigger the loading up
-of the =org= shipped with emacs which will induce conflicts.
-One way to avoid conflict is to wrap your =org= config code in a
-=with-eval-after-load= block like this:
+of the =org= shipped with emacs which will induce conflicts. One way to avoid
+conflict is to wrap your =org= config code in a =with-eval-after-load= block
+like this:
 
 #+BEGIN_SRC emacs-lisp
   (with-eval-after-load 'org
@@ -118,6 +125,43 @@ To use this configuration layer: in the main Spacemacs configuration
 file (=~/.spacemacs=), to the existing =dotspacemacs-configuration-layers= list
 add the =org= entry.
 
+** =TODO= dependencies
+If you would like to enforce dependencies in your =TODO= hierarchy, this layer has
+some sane default configurations to try via its ~org-todo-dependencies-strategy~
+configuration variable.
+
+Setting it to ~'naive-auto~, will cause an entry to switch to =DONE= when all its
+subentries are done, and to =TODO= otherwise. This does not result in extra
+prompts for the user, but doesn't work well with more workflow states because of
+the literal =DONE= and =TODO=; it is an excellent place for beginners and
+minimalists:
+
+#+BEGIN_SRC emacs-lisp
+  (setq-default dotspacemacs-configuration-layers '(
+    (org :variables
+         org-todo-dependencies-strategy 'naive-auto)))
+#+END_SRC
+
+Setting it to ~'semiauto~, will cause the user to be prompted to change an entry's
+state when the state of the subentries imply it: that is, when they are either
+all done while it is still a todo, or the when they are all still todo's while
+it is done. This assumes next to nothing about your workflow states (it does not
+use literal =TODO= and =DONE=), but may result in additional, possibly surprising,
+prompting for the user; and it has no intelligence to attempt to determine the
+destination state. It is a good thing to try if ~'naive-auto~ does not accomplish
+what you need:
+
+#+BEGIN_SRC emacs-lisp
+  (setq-default dotspacemacs-configuration-layers '(
+    (org :variables
+         org-todo-dependencies-strategy 'naive-auto)))
+#+END_SRC
+
+If neither of these suffice for you, =org-mode= can be configured directly by
+setting ~org-enforce-todo-dependencies~ to ~t~ and writing your own function to
+register on the ~org-after-todo-statistics-hook~. The layer implementation is a
+good reference.
+
 ** Agenda notifications
 To enable notifications for agenda events, set the variable
 =org-enable-notifications= to =t=.
@@ -135,10 +179,14 @@ daemon. To start the notification daemon automatically on Spacemacs startup, set
 the variable =org-start-notification-daemon-on-startup= to =t= as shown in the
 code snippet above.
 
-Documentation for how org-wild-notifier can be configured is provided [[https://github.com/akhramov/org-wild-notifier.el#configuration][here]]
+Check the [[https://github.com/akhramov/org-wild-notifier.el#configuration][documentation for how org-wild-notifier can be configured]]
 (org-wild-notifier uses the [[https://melpa.org/#/alert][alert]] package for showing notifications. On
 GNU/linux and Windows, using alert's [[https://github.com/jwiegley/alert#builtin-alert-styles][notifications]] style is recommended. Note
-also [[https://github.com/jwiegley/alert/pull/94][this issue]]).
+also [[https://github.com/jwiegley/alert/pull/94][this issue]]). Add [[https://github.com/jwiegley/alert#builtin-alert-styles][your preferred alert style]] to =dotspacemacs/user-config= with:
+
+#+BEGIN_SRC emacs-lisp
+  (setq alert-default-style 'notifications)
+#+END_SRC
 
 Press =M-S RET= to enter a todo headline and then press =, d t= to add a
 timestamp to the headline (using =, d t= requires the =diary-file= variable to
@@ -168,7 +216,7 @@ syntax:
 #+BEGIN_SRC org
   * Friday, 04/02/2021
     ** Appointment 1
-    <2021-04-02 Fri 10:10> 
+    <2021-04-02 Fri 10:10>
     ** TODO Appointment 2
     <2021-04-02 Fri 10:11>
 #+END_SRC
@@ -371,10 +419,10 @@ To install Trello support set the variable =org-enable-trello-support= to =t=.
 ** Different bullets
 You can tweak the bullets displayed in the org buffer in the function
 =dotspacemacs/user-config= of your dotfile by setting the variable
-=org-superstar-headline-bullets-list=. By default the list is set to =("◉" "○" "✸" "✿")=.
+=org-superstar-headline-bullets-list=. By default the list is set to =(?◉ ?○ ?✸ ?✿)=.
 
 #+BEGIN_SRC emacs-lisp
-  (setq org-superstar-bullet-list '("■" "◆" "▲" "▶"))
+  (setq org-superstar-headline-bullets-list '(?■ ?◆ ?▲ ?▶))
 #+END_SRC
 
 You can disable the fancy bullets entirely by adding =org-superstar= to =dotspacemacs-excluded-packages=.
@@ -384,14 +432,25 @@ You can disable the fancy bullets entirely by adding =org-superstar= to =dotspac
 #+END_SRC
 
 ** Project support
-Set the layer variable =org-projectile-file= to the filename where you want to
+Set the layer variable =org-project-capture-projects-file= to the filename where you want to
 store project-specific TODOs. If this is an absolute path, all todos will be
 stored in the same file (organized by project), whereas if it is just a single
 filename, todos will be stored in each project root.
 
+We currently only support =org-projectile= as backend as it supports more features than
+the build in =project.el= alternative.
+
 #+BEGIN_SRC emacs-lisp
   (setq-default dotspacemacs-configuration-layers
-    '((org :variables org-projectile-file "TODOs.org")))
+    '((org :variables org-project-capture-projects-file "TODOs.org")))
+#+END_SRC
+
+You can also pass a function as `org-project-capture-projects-file`. This allows you to
+set file name based on project
+
+#+BEGIN_SRC emacs-lisp
+  (setq-default dotspacemacs-configuration-layers
+    '((org :variables org-project-capture-projects-file '(lambda (arg) (concat (projectile-project-name) ".org")))))
 #+END_SRC
 
 The TODO files are not added to the agenda automatically. You can do this with
@@ -399,16 +458,17 @@ the following snippet.
 
 #+BEGIN_SRC emacs-lisp
   (with-eval-after-load 'org-agenda
-    (require 'org-projectile)
+    (require 'org-project-capture)
     (mapcar '(lambda (file)
                    (when (file-exists-p file)
                      (push file org-agenda-files)))
-            (org-projectile-todo-files)))
+            (org-project-capture-projects-file)))
 #+END_SRC
 
 ** Org-brain support
-For Emacs 25 or later, support for [[https://kungsgeten.github.io/org-brain.html][org-brain]] is included. See the [[https://github.com/Kungsgeten/org-brain][org-brain
-package documentation]] for more information.
+For Emacs 25 or later, to install [[https://kungsgeten.github.io/org-brain.html][org-brain]] set the variable =org-enable-org-brain-support= to =t=.
+
+See the [[https://github.com/Kungsgeten/org-brain][org-brain package documentation]] for more information.
 
 ** Org-roam support
 To install org-roam support set the variable =org-enable-roam-support= to =t=.
@@ -421,21 +481,22 @@ To install org-roam support set the variable =org-enable-roam-support= to =t=.
 
 More information about org-roam package (including manual) can be found at [[https://www.orgroam.com/][Org-roam]] website.
 
-*** Org-roam-server support
-To install support for [[https://github.com/org-roam/org-roam-server][org-roam-server]] set the variable =org-enable-roam-server=
-to =t=.
+*** Org-roam-ui support
+To install support for [[https://github.com/org-roam/org-roam-ui][org-roam-ui]] set the variable =org-enable-roam-ui= to =t=.
+
+Use ~M-x org-roam-ui-mode~ to enable the global mode. It will start a web browser and connect to it for real-time updates.
 
 *** Org-roam-protocol support
-To enable support for [[https://www.orgroam.com/manual.html#Roam-Protocol][Org Roam Protocol]] set the variable
+To enable support for [[https://www.orgroam.com/manual.html#Org_002droam-Protocol][Org Roam Protocol]] set the variable
 =org-enable-roam-protocol= to =t=.
 
-#+begin_src emacs-lisp
+#+BEGIN_SRC emacs-lisp
   (setq-default dotspacemacs-configuration-layers '(
     (org :variables
          org-enable-roam-protocol t)))
-#+end_src
+#+END_SRC
 
-And create a desktop file as described in the [[https://www.orgroam.com/manual.html#Roam-Protocol][org-roam manual]].
+And create a desktop file as described in the [[https://www.orgroam.com/manual.html#Org_002droam-Protocol][org-roam manual]].
 
 ** Mode line support
 To temporarily enable mode line display of org clock, press ~SPC t m c~.
@@ -497,12 +558,48 @@ Set the variable =org-enable-valign= to =t=:
 
 [[https://github.com/casouri/valign#valignel][Known problem: Rendering large tables (≥100 lines) is laggy.]]
 
+Valign and org-modern (below) both provide visual enhancements for org
+tables (if =org-modern-table= is non-nil), and they are not compatible
+with each other.
+
+** Org-modern support
+[[https://github.com/minad/org-modern][org-modern]] beautifies org files with many visual enhancements.
+It toggles visibility of some markers, changes faces of common elements and just "modernizes" the visual appearance.
+To enable it by default, set the =org-enable-modern-support= to =t=:
+
+#+BEGIN_SRC emacs-lisp
+  (setq-default dotspacemacs-configuration-layers
+   '((org :variables org-enable-modern-support t)))
+#+END_SRC
+
+To toggle its features in the current buffer, press either ~M-x
+org-modern-mode~ or ~, T m~.
+
+To toggle its features in all org buffers (and agenda buffers), press
+either ~M-x global-org-modern-mode~ or ~, T M~.
+
+Org-modern and valign (above) both provide visual enhancements for org
+tables (if =org-modern-table= is non-nil), and they are not compatible
+with each other.
+
 ** Org-appear support
 To install [[https://github.com/awth13/org-appear][org-appear]], which toggles visibility of emphasis markers, links, subscripts, and superscripts in org mode, set the =org-enable-appear-support= to =t=:
 
 #+BEGIN_SRC emacs-lisp
   (setq-default dotspacemacs-configuration-layers
    '((org :variables org-enable-appear-support t)))
+#+END_SRC
+
+If you set =org-appear-trigger= to =manual= and your editing style is =vim= or =hybrid=,
+=org-appear= is turned on in insert mode but not in normal mode.
+
+** Transclusion support
+To install [[https://github.com/nobiot/org-transclusion][org-transclusion]], which allows you to include a view of another file
+via a file link or an ID lin, set the =org-enable-transclusion-support= to =t=:
+
+#+BEGIN_SRC emacs-lisp
+  (setq-default dotspacemacs-configuration-layers
+   '((org :variables org-enable-transclusion-support t)))
 #+END_SRC
 
 ** Verb support
@@ -522,6 +619,27 @@ variable =org-enable-asciidoc-support= to =t=.
   (setq-default dotspacemacs-configuration-layers
     '((org :variables org-enable-asciidoc-support t)))
 #+END_SRC
+
+** Mermaid support
+To enable Mermaid diagram support in Org mode, set the variable
+=org-enable-mermaid-support= to =t= (this will automatically enable
+the [[https://github.com/syl20bnr/spacemacs/blob/develop/layers/+lang/mermaid/README.org][Mermaid layer]]).
+
+#+BEGIN_SRC emacs-lisp
+  (setq-default dotspacemacs-configuration-layers '(
+    (org :variables org-enable-mermaid-support t)))
+#+END_SRC
+
+With this feature enabled, you can use Mermaid diagrams in Org mode source blocks:
+
+#+BEGIN_SRC mermaid
+  graph TD
+      A[Client] --> B[Load Balancer]
+      B --> C[Server1]
+      B --> D[Server2]
+#+END_SRC
+
+This will render the diagram directly in your Org buffer when you evaluate the source block with ~SPC m b e~ or ~SPC m b b~.
 
 ** Spacemacs layout integration
 A [[https://github.com/syl20bnr/spacemacs/blob/develop/doc/DOCUMENTATION.org#layouts-and-workspaces][Spacemacs custom layout]] =@Org= is defined by the layer and accessible via =SPC l o=. The startup behavior can be customized with the following layer variables:
@@ -613,6 +731,18 @@ A [[https://github.com/syl20bnr/spacemacs/blob/develop/doc/DOCUMENTATION.org#lay
 Please see the [[https://github.com/Somelauw/evil-org-mode/blob/master/doc/keythemes.org][evil-org documentation]] for additional instructions on customizing
 =evil-org-mode=.
 
+*Insert state*
+In evil insert-state, use the introspection functions under =M-m
+h d= and =M-RET= to discover key bindings. The following table shows keybindings
+for some of the most frequently used commands
+
+| Key binding   | Description                                       |
+|---------------+---------------------------------------------------|
+| ~M-RET M-RET~ | org-meta-return (dwim return)                     |
+| ~M-h/l~       | org-meta-left/right (e.g. promote/demote heading) |
+
+*Normal state*
+
 | Key binding   | Description                     |
 |---------------+---------------------------------|
 | ~gj~ / ~gk~   | Next/previous element (heading) |
@@ -689,6 +819,7 @@ are also available.
 | ~SPC m s b~   | org-tree-to-indirect-buffer     |
 | ~SPC m s d~   | org-cut-subtree                 |
 | ~SPC m s y~   | org-copy-subtree                |
+| ~SPC m s p~   | org-paste-subtree               |
 | ~SPC m s l~   | org-demote-subtree              |
 | ~SPC m s h~   | org-promote-subtree             |
 | ~SPC m s k~   | org-move-subtree-up             |
@@ -729,6 +860,8 @@ are also available.
 | ~SPC m x o~ | org-open-at-point |
 
 ** Babel / Source Blocks
+Besides the key bindings mentioned here it is recommended to use the
+[[https://spacemacs.org/layers/+completion/auto-completion/README.html][auto-completion layer]] and its [[https://spacemacs.org/layers/+completion/auto-completion/README.html#yasnippet][yasnippet key bindings]] in particular.
 
 | Key binding | Description                              |
 |-------------+------------------------------------------|
@@ -816,6 +949,8 @@ The evilified org agenda supports the following bindings:
 |----------------------+-----------------------------------|
 | ~M-SPC~ or ~s-M-SPC~ | org-agenda transient state        |
 | ~SPC m a~            | org-agenda                        |
+| ~SPC m [~            | org-agenda-file-to-front          |
+| ~SPC m ]~            | org-remove-file                   |
 | ~SPC m ,~            | org-agenda-ctrl-c-ctrl-c          |
 | ~SPC m c~            | org-agenda-capture                |
 | ~SPC m C c~          | org-agenda-clock-cancel           |
@@ -830,6 +965,7 @@ The evilified org agenda supports the following bindings:
 | ~SPC m i P~          | org-agenda-priority               |
 | ~SPC m i t~          | org-agenda-set-tags               |
 | ~SPC m s r~          | org-agenda-refile                 |
+| ~t~ or ~SPC m T T~   | org-agenda-todo                   |
 | ~M-j~                | next item                         |
 | ~M-k~                | previous item                     |
 | ~M-h~                | earlier view                      |
@@ -839,12 +975,13 @@ The evilified org agenda supports the following bindings:
 | ~C-v~                | change view                       |
 | ~RET~                | org-agenda-goto                   |
 | ~M-RET~              | org-agenda-show-and-scroll-up     |
+| ~s~                  | org-save-all-org-buffers          |
 
 *** Org agenda transient state
 Use ~SPC m .~, ~M-SPC~ or ~s-M-SPC~ in an org agenda buffer to activate its
 transient state. The transient state aims to list the most useful org agenda
 commands and visually organize them by category. The commands associated with
-each binding are listed bellow.
+each binding are listed below.
 
 | Key binding | Description         | Command                           |
 |-------------+---------------------+-----------------------------------|
@@ -869,7 +1006,6 @@ each binding are listed bellow.
 | ~fc~        | by category         | org-agenda-filter-by-category     |
 | ~fd~        | delete all filters  | org-agenda-filter-remove-all      |
 | ~fh~        | by top headline     | org-agenda-filter-by-top-headline |
-| ~fr~        | refine by tag       | org-agenda-filter-by-tag-refine   |
 | ~ft~        | by tag              | org-agenda-filter-by-tag          |
 | ~fx~        | by regexp           | org-agenda-filter-by-regexp       |
 |-------------+---------------------+-----------------------------------|
@@ -937,7 +1073,7 @@ org-present must be activated explicitly by typing: ~SPC SPC org-present~
 |-------------+--------------------------------------------|
 | ~SPC a o /~ | Search org files for keywords and headings |
 
-** Org-projectile
+** Org-project-capture
 
 | Key binding       | Description                                             |
 |-------------------+---------------------------------------------------------|
@@ -1070,24 +1206,49 @@ Key binding prefixes:
 |-------------+-----------------------------------------------------|
 | ~SPC m r q~ | Kill current response headers buffer and its window |
 
+** Org-modern
+
+| Key binding | Description                                         |
+|-------------+-----------------------------------------------------|
+| ~SPC m T m~ | Toggle org-modern in current buffer                 |
+| ~SPC m T M~ | Toggle org-modern in all org and org agenda buffers |
+
 ** Org-roam
 Key binding prefixes:
 - ~SPC a o r~ (anywhere)
 - ~SPC m r~ (in an org-mode buffer)
 
-| Key binding   | Description                           |
-|---------------+---------------------------------------|
-| ~SPC m r l~   | Toggle org-roam links visibility      |
-| ~SPC m r f~   | Find file in org-roam                 |
-| ~SPC m r i~   | Insert file into org-roam             |
-| ~SPC m r I~   | Immediately insert file into org-roam |
-| ~SPC m r g~   | Visualize org-roam graph              |
-| ~SPC m r b~   | Switch org-roam buffer                |
-| ~SPC m r d y~ | Open yesterday's daily note           |
-| ~SPC m r d t~ | Open today's daily note               |
-| ~SPC m r d T~ | Open tomorrow's daily note            |
-| ~SPC m r d d~ | Open daily note via calendar view     |
-| ~SPC m r t a~ | Add org-roam tag to file              |
-| ~SPC m r t d~ | Delete org-roam tag from file         |
-| ~SPC m r a~   | Add org-roam alias to file            |
-| ~SPC m r s~   | Start org-roam server mode            |
+| Key binding   | Description                       |
+|---------------+-----------------------------------|
+| ~SPC m r c~   | Capture                           |
+| ~SPC m r l~   | Toggle org-roam links visibility  |
+| ~SPC m r f~   | Find node in org-roam             |
+| ~SPC m r i~   | Insert node into org-roam         |
+| ~SPC m r g~   | Visualize org-roam graph          |
+| ~SPC m r a~   | Add org-roam alias to file        |
+| ~SPC m r d y~ | Open yesterday's daily note       |
+| ~SPC m r d t~ | Open today's daily note           |
+| ~SPC m r d T~ | Open tomorrow's daily note        |
+| ~SPC m r d d~ | Open daily note via calendar view |
+| ~SPC m r t a~ | Add a tag to file                 |
+| ~SPC m r t r~ | Remove a tag from file            |
+
+*org-roam buffer*
+
+| Key binding | Description             |
+|-------------+-------------------------|
+| ~o~         | Follow link             |
+| ~r~         | Refresh org-roam buffer |
+
+** Transclusion
+
+| Key binding | Description                    |
+|-------------+--------------------------------|
+| ~SPC m u u~ | Transclude under cursor        |
+| ~SPC m u U~ | Transclude all in buffer       |
+| ~SPC m u d~ | De-transclude under cursor     |
+| ~SPC m u D~ | De-transclude all in buffer    |
+| ~SPC m u l~ | Demote transcluded subtree     |
+| ~SPC m u h~ | Promote transcluded subtree    |
+| ~SPC m u r~ | Refresh transclusion in buffer |
+| ~SPC m u g~ | Go to transclusion source      |

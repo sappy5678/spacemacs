@@ -1,6 +1,6 @@
-;;; funcs.el --- docker Layer functions File for Spacemacs
+;;; funcs.el --- docker Layer functions File for Spacemacs  -*- lexical-binding: nil; -*-
 ;;
-;; Copyright (c) 2012-2021 Sylvain Benner & Contributors
+;; Copyright (c) 2012-2025 Sylvain Benner & Contributors
 ;;
 ;; Author: Seong Yong-ju <sei40kr@gmail.com>
 ;; URL: https://github.com/syl20bnr/spacemacs
@@ -24,4 +24,4 @@
 (defun spacemacs//docker-dockerfile-setup-backend ()
   "Conditionally setup docker backend."
   (when (eq docker-dockerfile-backend 'lsp)
-    (lsp)))
+    (lsp-deferred)))

@@ -1,6 +1,6 @@
 ;;; core-configuration-layer-ftest.el --- Spacemacs Functional Test File
 ;;
-;; Copyright (c) 2012-2021 Sylvain Benner & Contributors
+;; Copyright (c) 2012-2025 Sylvain Benner & Contributors
 ;;
 ;; Author: Sylvain Benner <sylvain.benner@gmail.com>
 ;; URL: https://github.com/syl20bnr/spacemacs
@@ -32,7 +32,7 @@
         (dotspacemacs-configuration-layers '(emacs-lisp
                                              (git :variables foo 'bar)))
         configuration-layer--used-layers
-        (configuration-layer--indexed-layers (make-hash-table :size 1024)))
+        (configuration-layer--indexed-layers (make-hash-table)))
     (configuration-layer/discover-layers 'refresh-index)
     (configuration-layer//declare-used-layers dotspacemacs-configuration-layers)
     (should (eq 'spacemacs-bootstrap
@@ -43,7 +43,7 @@
         (dotspacemacs-configuration-layers '(emacs-lisp
                                              (git :variables foo 'bar)))
         configuration-layer--used-layers
-        (configuration-layer--indexed-layers (make-hash-table :size 1024)))
+        (configuration-layer--indexed-layers (make-hash-table)))
     (configuration-layer/discover-layers 'refresh-index)
     (configuration-layer//declare-used-layers dotspacemacs-configuration-layers)
     (should (eq 'spacemacs-defaults (cadr configuration-layer--used-layers)))))
@@ -53,7 +53,7 @@
         (dotspacemacs-configuration-layers '(emacs-lisp
                                              (git :variables foo 'bar)))
         configuration-layer--used-layers
-        (configuration-layer--indexed-layers (make-hash-table :size 1024)))
+        (configuration-layer--indexed-layers (make-hash-table)))
     (configuration-layer/discover-layers 'refresh-index)
     (configuration-layer//declare-used-layers dotspacemacs-configuration-layers)
     (should (eq 'spacemacs-base (caddr configuration-layer--used-layers)))))
@@ -84,9 +84,6 @@
 ;;     (should (equal t (configuration-layer//stable-elpa-verify-archive)))))
 
 (ert-deftest test-stable-elpa-verify-archive--verification-failed ()
-  ;; FIXME: Seems to fail on specific Emacs version + OS combo >_> @syl20bnr
-  (skip-unless (not (and (version< emacs-version "27.1")
-                         (string-equal system-type "windows-nt"))))
   (let (verification-error)
     (cl-letf (((symbol-function 'configuration-layer//stable-elpa-tarball-local-file)
                (lambda ()

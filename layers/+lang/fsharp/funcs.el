@@ -1,8 +1,8 @@
-;;; packages.el --- F# Layer packages File for Spacemacs
+;;; packages.el --- F# Layer packages File for Spacemacs  -*- lexical-binding: nil; -*-
 ;;
-;; Copyright (c) 2012-2021 Sylvain Benner & Contributors
+;; Copyright (c) 2012-2025 Sylvain Benner & Contributors
 ;;
-;; Author: Maximilian Wolff <smile13241324@gmail.com>
+;; Author: Maxi Wolff <smile13241324@gmail.com>
 ;; URL: https://github.com/syl20bnr/spacemacs
 ;;
 ;; This file is not part of GNU Emacs.
@@ -26,15 +26,15 @@
   ;; Activate lsp company explicitly to activate
   ;; standard backends as well
   ;; Eglot and LSP-mode use the same company-backend.
-    (spacemacs|add-company-backends
-      :backends company-capf
-      :modes fsharp-mode
-      :variables company-tooltip-align-annotations t))
+  (spacemacs|add-company-backends
+    :backends company-capf
+    :modes fsharp-mode
+    :variables company-tooltip-align-annotations t))
 
 (defun spacemacs//fsharp-setup-backend ()
   "Conditionally setup fsharp backend."
   (pcase fsharp-backend
-    ('lsp (lsp))
+    ('lsp (lsp-deferred))
     ('eglot (eglot-ensure))))
 
 (defun spacemacs/fsharp-load-buffer-file-focus ()

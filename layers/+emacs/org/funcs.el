@@ -1,6 +1,6 @@
-;;; funcs.el --- Org Layer functions File for Spacemacs
+;;; funcs.el --- Org Layer functions File for Spacemacs  -*- lexical-binding: nil; -*-
 ;;
-;; Copyright (c) 2012-2021 Sylvain Benner & Contributors
+;; Copyright (c) 2012-2025 Sylvain Benner & Contributors
 ;;
 ;; Author: Sylvain Benner <sylvain.benner@gmail.com>
 ;; URL: https://github.com/syl20bnr/spacemacs
@@ -38,15 +38,15 @@
 
 
 
-(defun org-projectile/capture (&optional arg)
+(defun spacemacs/org-project-capture-capture (&optional arg)
   (interactive "P")
   (if arg
-      (org-projectile-project-todo-completing-read :empty-lines 1)
-    (org-projectile-capture-for-current-project :empty-lines 1)))
+      (org-project-capture-project-todo-completing-read :empty-lines 1)
+    (org-project-capture-capture-for-current-project :empty-lines 1)))
 
-(defun org-projectile/goto-todos ()
+(defun spacemacs/org-project-capture-goto-todos ()
   (interactive)
-  (org-projectile-goto-location-for-project (projectile-project-name)))
+  (org-project-capture-goto-location-for-project (projectile-project-name)))
 
 
 
@@ -116,3 +116,28 @@ For example: To unfold from a magit diff buffer, evaluate the following:
 (advice-add 'magit-diff-visit-file :after #'spacemacs/org-reveal-advice)"
   (when (derived-mode-p 'org-mode)
     (org-reveal)))
+
+
+;; Based on the suggestion here:
+;; https://orgmode.org/manual/Breaking-Down-Tasks.html
+(defun spacemacs/org-summary-todo-naive-auto (n-done n-not-done)
+  "Switch entry to DONE when all subentries are done, to TODO otherwise."
+  (org-todo (if (= n-not-done 0) "DONE" "TODO")))
+
+(defun spacemacs/org-summary-todo-semiauto (n-done n-not-done)
+  "Prompt to change entry state when the state of the subentries imply it."
+  (and (org-get-todo-state) ;; Don't force a todo state if there is none yet
+       ;; If either it is in a todo state but should be in a done state
+       (if (or (and (org-entry-is-todo-p) (= n-not-done 0))
+               ;; or it is in a done state and should be in a todo state
+               (and (org-entry-is-done-p) (> n-not-done 0)))
+           ;; then prompt to change the state
+           (org-todo))))
+
+
+
+
+(defun spacemacs/with-save-excursion (orig-fun &rest args)
+  "Execute the given function with save excursion."
+  (save-excursion
+    (apply orig-fun args)))

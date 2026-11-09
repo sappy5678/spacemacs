@@ -1,6 +1,6 @@
-;;; core-spacemacs.el --- Spacemacs Core File
+;;; core-spacemacs.el --- Spacemacs Core File  -*- lexical-binding: t; -*-
 ;;
-;; Copyright (c) 2012-2021 Sylvain Benner & Contributors
+;; Copyright (c) 2012-2025 Sylvain Benner & Contributors
 ;;
 ;; Author: Sylvain Benner <sylvain.benner@gmail.com>
 ;; URL: https://github.com/syl20bnr/spacemacs
@@ -38,6 +38,9 @@
     ("spacemacs" . "Spacemacs distribution layers"))
   "Special names for categories. Used to generate the layers list.")
 
+(defvar publish-target nil
+  "Directory to publish documentation to.")
+
 (defun spacemacs//generate-layers-from-path (path level)
   "Add all layers found in PATH to the current buffer, at org level LEVEL."
   (let* ((all-subs (directory-files path t nil nil))
@@ -67,7 +70,7 @@
         (insert (format "\n%s %s\n" level pretty-name))
         (spacemacs//generate-layers-from-path c (concat level "*"))))))
 
-(defun spacemacs//fetch-docs-from-root (project-plist)
+(defun spacemacs//fetch-docs-from-root (_project-plist)
   "Add missing CONTRIBUTING and COMMUNITY files to doc folder for publishing.
    Have been moved out of the doc folder to let github show the documentation.
    See commit 315528c89fd351d559a262bb88bd15ed961e4b4e"
@@ -93,7 +96,7 @@ See `spacemacs//fetch-docs-from-root'"
       (f-move file-to-move
               (concat publish-target file-name)))))
 
-(defun spacemacs/generate-layers-file (project-plist)
+(defun spacemacs/generate-layers-file (_project-plist)
   "Generate the layers list file."
   (interactive)
   (with-temp-buffer
@@ -122,17 +125,25 @@ See `spacemacs//fetch-docs-from-root'"
 
 (defun spacemacs//format-content (&rest r)
   (let* ((content (car r))
-         (div-string "<div id=\"content\">")
+         ;; FIXME:  This string has changed and we got a hard to catch bug
+         ;;         Total number of times we got owned by the div: 1
+         ;;         Increase the counter next time or find a better way to look
+         ;;         up beginning of content.
+         (div-string "<div id=\"content\" class=\"content\">")
+         ;; onclick below tries to send user to the same path but at a different domain
+         ;; the href attribute is a fallback in case javascript is disabled
          (toc-string "<div id=\"toggle-sidebar\"><a href=\"#table-of-contents\"><h2>Table of Contents</h2></a></div>")
          (has-toc (s-index-of "Table of Contents" content))
-         (beginning-of-content-div-pos (+ (length div-string)
-                                          (s-index-of div-string content)))
+         (indx-of-div-str (or (s-index-of div-string content t)
+                              (signal 'search-failed "Can't find content div")))
+         (beginning-of-content-div-pos (+ (length div-string) indx-of-div-str))
          (beginning-of-content (substring content
                                           0 beginning-of-content-div-pos))
          (rest-of-content (substring content beginning-of-content-div-pos)))
     (if (not (null has-toc))
         (format "%s\n%s%s" beginning-of-content toc-string rest-of-content)
       content)))
+
 
 (defun spacemacs//toc-org-unhrefify-toc ()
   "Make TOC classical org-mode TOC."
@@ -166,7 +177,7 @@ the current buffer already has headlines with -<N> postfixes.
 (defun spacemacs//org-heading-annotate-custom-id ()
   "Annotate headings with the indexes that GitHub uses for linking.
 `org-html-publish-to-html' will use them instead of the default #orgheadline{N}.
-This way the GitHub links and the http://spacemacs.org/ links will be
+This way the GitHub links and the https://spacemacs.org/ links will be
 compatible."
   (let ((heading-regexp "^[\\*]+\s\\(.*\\).*$"))
     (goto-char (point-min))
@@ -214,10 +225,10 @@ exported org files should be processed with
                                         (string-suffix-p
                                          "COMMUNITY.org"
                                          bfn))
-                                      (file-name-directory
-                                       (directory-file-name
-                                        bfnd))
-                                      bfnd)))
+                                       (file-name-directory
+                                        (directory-file-name
+                                         bfnd))
+                                     bfnd)))
                      nil t nil 2)
       (replace-match ".html" nil t nil 3))))
 
@@ -272,21 +283,14 @@ preprocessors for the exported .org files."
   (advice-add 'org-html-toc :filter-return #'spacemacs//format-toc)
   (advice-add 'org-html-template :filter-return #'spacemacs//format-content)
   (advice-add 'org-html-publish-to-html :around #'spacemacs//pub-doc-html-advice)
-  (let* ((header
+  (let* ((org-mode-hook nil)
+         (header
           "<link rel=\"stylesheet\" type=\"text/css\"
                  href=\"http://www.pirilampo.org/styles/readtheorg/css/htmlize.css\"/>
           <script src=\"https://ajax.googleapis.com/ajax/libs/jquery/2.1.3/jquery.min.js\"></script>
           <script src=\"https://maxcdn.bootstrapcdn.com/bootstrap/3.3.4/js/bootstrap.min.js\"></script>
           <script src=\"http://www.pirilampo.org/styles/readtheorg/js/readtheorg.js\"></script>
           <script>
-          // Google Analytics
-                     (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
-                         (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new
-                         Date();a=s.createElement(o),
-                         m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
-                         })(window,document,'script','//www.google-analytics.com/analytics.js','ga');
-
-                     ga('create', 'UA-28326243-2', 'auto'); ga('send', 'pageview');
 
           // Add permalinks to the documentation headings
           $(document).ready(function() {

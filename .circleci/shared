@@ -2,7 +2,7 @@
 ## Shared script part for CircleCI
 ##
 ## Copyright (c) 2012-2014 Sylvain Benner
-## Copyright (c) 2014-2018 Sylvain Benner & Contributors
+## Copyright (c) 2014-2021 Sylvain Benner & Contributors
 ##
 ## Author: Eugene Yaremenko
 ## URL: https://github.com/syl20bnr/spacemacs
@@ -12,11 +12,8 @@
 ## License: GPLv3
 
 # Vars
-dev_b="develop"
-mst_b="master"
-prj_owner="syl20bnr"
-prj_repo="spacemacs"
-bot_login="emacspace"
+prj_owner="${PRJ_OWNER}"
+prj_repo="${PRJ_REPO}"
 api_URL_root="https://api.github.com"
 
 upstream_data_URL_root="${api_URL_root}/"
@@ -26,6 +23,7 @@ upstream_data_URL_root+="${prj_repo}"
 
 CIRCLE_PR_NUMBER="${CIRCLE_PR_NUMBER:-${CIRCLE_PULL_REQUEST##*/}}"
 pr_data_URL="${upstream_data_URL_root}/pulls/${CIRCLE_PR_NUMBER}"
+pr_files_URL="${upstream_data_URL_root}/pulls/${CIRCLE_PR_NUMBER}/files"
 upstream_data_URL="${upstream_data_URL_root}/branches/develop"
 
 pr_file_list_URL="${api_URL_root}/"
@@ -42,6 +40,17 @@ echo_headline () {
 	printf "\n$1\n"
 	printf '=%.0s' {1..80}
 	echo
+}
+
+exit_if_no_patchfile () {
+    if [ ! -f "/tmp/${PUBLISH}.patch" ]; then
+        echo "\"/tmp/${PUBLISH}.patch\" file doesn't exists. Exiting."
+        exit 0
+    fi
+    if [[ -z $(grep '[^[:space:]]' "/tmp/${PUBLISH}.patch") ]]; then
+        echo "\"/tmp/${PUBLISH}.patch\" file is empty. Exiting."
+        exit 0
+    fi
 }
 
 select_changed_orgs () {
@@ -63,15 +72,4 @@ fail_when_undefined_pr_number () {
         echo "Job restart sometimes helps."
         exit 1
     fi
-}
-
-skip_when_branch_update () {
-    if [[ "${IS_BRANCH_UPDATE}" == "yes" ]]; then
-        echo "Skipping for branch update."
-        exit 0
-    fi
-}
-
-cleanup () {
-	rm -rf ~/.emacs.d/elpa ~/.emacs.d/.cache ~/.spacemacs
 }

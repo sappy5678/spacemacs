@@ -13,6 +13,7 @@
   - [[#vc-directory-buffer-commands][VC Directory buffer commands]]
   - [[#commit-message-editing-buffer][Commit message editing buffer]]
   - [[#diff-mode][Diff mode]]
+  - [[#log-edit-buffer][Log Edit buffer]]
   - [[#log-view-buffer][Log view buffer]]
   - [[#annotation-buffer][Annotation buffer]]
   - [[#version-control-transient-state][Version Control Transient-state]]
@@ -24,7 +25,7 @@ This layers adds general configuration for [[http://www.gnu.org/software/emacs/m
 It should work with all VC backends such as Git, Mercurial, Bazaar, SVN, etc...
 
 ** Features:
-- highlights uncommitted changes in the fringe or margin with [[https://github.com/dgutov/diff-hl][diff-hl]], [[https://github.com/syohex/emacs-git-gutter][git-gutter]], or [[https://github.com/nonsequitur/git-gutter-plus][git-gutter+]]
+- highlights uncommitted changes in the fringe or margin with [[https://github.com/dgutov/diff-hl][diff-hl]] or [[https://github.com/syohex/emacs-git-gutter][git-gutter]]
 - adds vcs transient-state ~SPC g.~ to allow quick navigation and modification of buffer hunks.
 
 * Install
@@ -37,9 +38,8 @@ file.
 You can choose the package to facilitate the diff transient-state and show
 margins by setting the =version-control-diff-tool= variable to one of the
 supported packages:
-- [[https://github.com/dgutov/diff-hl][diff-hl]]
+- [[https://github.com/dgutov/diff-hl][diff-hl]] (default)
 - [[https://github.com/syohex/emacs-git-gutter][git-gutter]]
-- [[https://github.com/nonsequitur/git-gutter-plus][git-gutter+]] (default)
 
 #+BEGIN_SRC emacs-lisp
   '(version-control :variables
@@ -53,30 +53,36 @@ You can choose the side on which the diff appears (by default it's the right sid
                     version-control-diff-side 'left)
 #+END_SRC
 
-To automatically enable diff margins in all buffers, set
-=version-control-global-margin=
+Diff margins are automatically enabled in all buffers, but they can be
+disabled if you only want to use other diff-hl features:
 
 #+BEGIN_SRC emacs-lisp
   '(version-control :variables
-                    version-control-global-margin t)
+                    version-control-margin nil)
 #+END_SRC
 
 ** Differences between margin packages
-This layer contains generalized mappings for three diff margin packages:
-=diff-hl=, =git-gutter=, and =git-gutter+=.
+This layer contains generalized mappings for two different margin packages:
+=diff-hl= and =git-gutter=.
 
 There are some differences between packages that might have some people prefer
 one over the other:
 
-| Feature                             | diff-hl | git-gutter | git-gutter+ |
-|-------------------------------------+---------+------------+-------------|
-| Show in fringe                      | X       | X          | X           |
-| Extended VCS support (e.g. hg, svn) | X       | X          |             |
-| Stage hunks from buffer             |         | X          | X           |
-| Dired support                       | X       |            |             |
+| Feature                             | diff-hl | git-gutter |
+|-------------------------------------+---------+------------|
+| Show in fringe                      | X       | X          |
+| Extended VCS support (e.g. hg, svn) | X       | X          |
+| Stage hunks from buffer             |         | X          |
+| Dired support                       | X       |            |
+
+=diff-hl= supports both the margin (TTY frames) and the fringe (GUI
+frames). =git-gutter-fringe= supports only the GUI/Fringe, while the
+=git-gutter= supports the TUI/Margin. Check the variable
+=version-control-margin= for how Spacemacs selects the margin
+features.
 
 * Key bindings
-VC commands:
+VC commands (not exhaustive):
 
 | Key binding | Description                                            |
 |-------------+--------------------------------------------------------|
@@ -89,13 +95,14 @@ VC commands:
 | ~SPC g v g~ | Visually annotate the current file                     |
 | ~SPC g v d~ | Open the VC Directory buffer                           |
 | ~SPC g v +~ | Update the working copy                                |
+| ~SPC g v h~ | List the change log for the current region in file     |
 | ~SPC g v i~ | Register (add) into a version control system           |
 | ~SPC g v u~ | Revert working copy to their repository contents       |
 | ~SPC g v l~ | List the change log                                    |
 | ~SPC g v L~ | List the change log for the current VC controlled tree |
 | ~SPC g v v~ | Do the next logical VC operation (=vc-next-action=)    |
-| ~SPC g v I~ | Ignore file (=vc-ignore=)                              |
-| ~SPC g v r~ | Resolve conflicts in file                              |
+| ~SPC g v G~ | Ignore file (=vc-ignore=)                              |
+| ~SPC g v R~ | Resolve conflicts in file                              |
 
 ** VC Directory buffer commands
 You can hit ~SPC pv~ from the current project to open the VC Directory buffer,
@@ -104,15 +111,16 @@ Then you may mark (=m= key) files you are interested in, to form a fileset.
 Most commands described above are applicable to filesets too.
 To some of them are given shortcuts:
 
-| Key binding | Description                       |
-|-------------+-----------------------------------|
-| ~=~         | Compare selected files with head  |
-| ~c~         | Open a =commit message buffer=    |
-| ~l~         | List changes                      |
-| ~a~         | Annotate selected files           |
-| ~i~         | Add into a version control system |
-| ~r~         | Refresh directory view            |
-| ~E~         | Ignore file under cursor          |
+| Key binding | Description                        |
+|-------------+------------------------------------|
+| ~=~         | Compare marked files with head     |
+| ~c~         | Commit/Add/"Continue" marked files |
+| ~C~         | Commit/Add/"Continue" all files    |
+| ~l~         | List changes                       |
+| ~a~         | Annotate marked files              |
+| ~i~         | Add into a version control system  |
+| ~r~         | Refresh directory view             |
+| ~E~         | Ignore marked files under cursor   |
 
 Navigation and interaction commands in the VC Directory buffer:
 
@@ -158,6 +166,16 @@ A transient buffer is also defined, start it with ~SPC m .~ or ~, .~
 | ~J~         | Next file     |
 | ~k~         | Previous hunk |
 | ~K~         | Previous file |
+
+** Log Edit buffer
+
+| Key binding    | Description                          |
+|----------------+--------------------------------------|
+| ~, ,~ or ~, c~ | Commit with message                  |
+| ~, k~ or ~, a~ | Abort commit (saving message)        |
+| ~, d~          | Show diff to be committed            |
+| ~, f~          | Show files to be committed           |
+| ~, w~          | Generate ChangeLog entries from diff |
 
 ** Log view buffer
 
@@ -211,40 +229,41 @@ Use ~SPC g .~ to enter a transient state for quickly navigating between hunks in
 ** Smerge Mode Transient-state
 Movement:
 
-| Key binding                | Description         |
-|----------------------------+---------------------|
-| ~SPC g r n~                | Next hunk           |
-| ~SPC g r N~ or ~SPC g r p~ | Previous hunk       |
-| ~SPC g r j~                | Go to next line     |
-| ~SPC g r k~                | Go to previous line |
+| Key binding                | Description                                  |
+|----------------------------+----------------------------------------------|
+| ~SPC g r n~                | Next conflict (possibly in another file)     |
+| ~SPC g r N~ or ~SPC g r p~ | Previous conflict (possibly in another file) |
+| ~SPC g r j~                | Go to next line                              |
+| ~SPC g r k~                | Go to previous line                          |
 
 Merge Actions:
 
 | Key binding | Description  |
 |-------------+--------------|
+| ~SPC g r u~ | Keep upper   |
 | ~SPC g r b~ | Keep base    |
-| ~SPC g r m~ | Keep mine    |
+| ~SPC g r l~ | Keep lower   |
 | ~SPC g r a~ | Keep all     |
-| ~SPC g r o~ | Keep other   |
 | ~SPC g r c~ | Keep current |
 | ~SPC g r K~ | Kill current |
 
 Diff:
 
-| Key binding | Description         |
-|-------------+---------------------|
-| ~SPC g r <~ | Diff base and mine  |
-| ~SPC g r =~ | Diff mine and other |
-| ~SPC g r >~ | Diff base and other |
-| ~SPC g r r~ | Refine              |
-| ~SPC g r e~ | Ediff               |
+| Key binding | Description          |
+|-------------+----------------------|
+| ~SPC g r <~ | Diff base and upper  |
+| ~SPC g r =~ | Diff upper and lower |
+| ~SPC g r >~ | Diff base and lower  |
+| ~SPC g r r~ | Refine               |
+| ~SPC g r e~ | Ediff                |
 
 Other:
 
 | Key binding | Description                    |
 |-------------+--------------------------------|
 | ~SPC g r C~ | Combine current and next hunks |
-| ~SPC g r u~ | Undo                           |
+| ~SPC g r s~ | Swap upper and lower regions   |
+| ~SPC g r U~ | Undo                           |
 | ~SPC g r q~ | Quit transient state           |
 
 ** Toggles

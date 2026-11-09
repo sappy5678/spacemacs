@@ -1,6 +1,6 @@
-;;; packages.el --- EXWM Layer packages File for Spacemacs
+;;; packages.el --- EXWM Layer packages File for Spacemacs  -*- lexical-binding: t; -*-
 ;;
-;; Copyright (c) 2012-2021 Sylvain Benner & Contributors
+;; Copyright (c) 2012-2025 Sylvain Benner & Contributors
 ;;
 ;; Author: Sylvain Benner <sylvain.benner@gmail.com>
 ;; URL: https://github.com/syl20bnr/spacemacs
@@ -22,141 +22,108 @@
 
 
 (defconst exwm-packages
-    '((helm-exwm :requires helm)
-      (evil-exwm-state :location (recipe :fetcher github
-                                         :repo "domenzain/evil-exwm-state"))
-      (xelb :location (recipe :fetcher github
-                              :repo "ch11ng/xelb")
-            :step pre)
-      (exwm :location (recipe :fetcher github
-                              :repo "ch11ng/exwm")
-            :step pre)))
+  '(desktop-environment
+    (evil-exwm-state :toggle (memq dotspacemacs-editing-style '(vim hybrid))
+                     :location (recipe :fetcher github
+                                       :repo "domenzain/evil-exwm-state"))
+    (exwm :step pre)
+    (helm-exwm :requires helm)
+    (xdg :location built-in)
+    (xelb :step pre)))
+
+(defun exwm/init-xdg ()
+  (use-package xdg
+    :defer t
+    :commands (xdg-config-dirs xdg-config-home xdg-desktop-read-file)))
+
+(defun exwm/init-desktop-environment ()
+  (use-package desktop-environment
+    :after exwm
+    :spacediminish t
+    :defer t
+    :init (spacemacs|add-toggle desktop-environment
+            :mode desktop-environment-mode
+            :documentation "Keybindings for Desktop Environment functionality."
+            :evil-leader "TD")
+    :config
+    (setq desktop-environment-update-exwm-global-keys :prefix)
+    (define-key desktop-environment-mode-map (kbd "s-l") nil)
+    ;; If we don't enable this, exwm/switch-to-buffer-or-run won't move an X window to the current frame
+    (setq exwm-layout-show-all-buffers t)))
 
 (defun exwm/init-helm-exwm ()
   ;; when helm is used activate extra EXWM features
   (use-package helm-exwm
     :config
-    (progn
-      ;; Add EXWM buffers to a specific section in helm mini
-      (setq exwm-helm-exwm-emacs-buffers-source
-            (helm-exwm-build-emacs-buffers-source))
-      (setq exwm-helm-exwm-source (helm-exwm-build-source))
-      (setq helm-mini-default-sources `(exwm-helm-exwm-emacs-buffers-source
-                                        exwm-helm-exwm-source
-                                        helm-source-recentf
-                                        helm-source-buffer-not-found))
-      ;; Add a prefix command to choose among EXWM buffers only
-      (spacemacs/set-leader-keys "WW" 'helm-exwm))))
+    ;; Add EXWM buffers to a specific section in helm mini
+    (setq exwm-helm-exwm-emacs-buffers-source (helm-exwm-build-emacs-buffers-source))
+    (setq exwm-helm-exwm-source (helm-exwm-build-source))
+    (setq helm-mini-default-sources `(exwm-helm-exwm-emacs-buffers-source
+                                      exwm-helm-exwm-source
+                                      helm-source-recentf
+                                      helm-source-buffer-not-found))
+    ;; Add a prefix command to choose among EXWM buffers only
+    (spacemacs/set-leader-keys "WW" 'helm-exwm)))
 
 (defun exwm/init-evil-exwm-state ()
   (use-package evil-exwm-state
-    :init
+    :config
     (spacemacs/define-evil-state-face "exwm" "firebrick1")
     (spacemacs/define-evil-state-face "exwm-insert" "chartreuse3")))
-
-(defun exwm/init-cl-generic ()
-  (use-package cl-generic
-    :demand))
 
 (defun exwm/init-xelb ()
   (use-package xelb))
 
 (defun exwm/init-exwm ()
-  (use-package exwm-randr)
   (use-package exwm-systemtray)
-  (use-package exwm-config)
   (use-package exwm
+    :custom
+    (use-dialog-box nil "Disable dialog boxes since they are unusable in EXWM")
+    (exwm-input-line-mode-passthrough t "Pass all keypresses to emacs in line mode.")
     :init
-    ;; Disable dialog boxes since they are unusable in EXWM
-    (setq use-dialog-box nil)
-    ;; Use as many workspaces as there are connected displays
-    ;; TODO: Is there a way of doing this with xelb?
-    (defvar exwm--randr-displays (split-string
-                            (shell-command-to-string
-                             "xrandr | grep ' connected' | cut -d' ' -f1 "))
-      "The list of connected RandR displays")
-    ;; Set at least as many workspaces as there are connected displays.
-    ;; At the user's option, begin with even more workspaces
-    (setq exwm-workspace-number
-          (if exwm-workspace-number
-              (max exwm-workspace-number (length exwm--randr-displays))
-              (length exwm--randr-displays)))
-    ;; The first workspaces will match the order in RandR
-    (setq exwm-randr-workspace-output-plist
-          (exwm//flatenum 0 exwm--randr-displays))
+    (setq exwm-input-global-keys
+          `(
+            ([?\M-m] . spacemacs-cmds)
+            ([?\s-i] . exwm-input-toggle-keyboard)
+            ([?\s-l] . exwm/exwm-lock)
+            ([?\s-r] . exwm-reset) ;; s-r: Reset (to line-mode).
 
+            ([?\s-w] . exwm-workspace-switch) ;; s-w: Switch workspace.
+            ([?\s-\t] . exwm/jump-to-last-exwm)
+            ([?\s- ] . (lambda (cmd) ;; s-SPC: Launch application.
+                         (interactive (list (read-shell-command "$ ")))
+                         (start-process-shell-command cmd nil cmd)))
+            ;; s-N: Switch to N-th window.
+            ,@(mapcar (lambda (i)
+                        `(,(kbd (format "s-%d" i)) .
+                          (lambda ()
+                            (interactive)
+                            (winum-select-window-by-number ,i))))
+                      (number-sequence 0 9))))
+    (exwm-wm-mode)
+    ;; "Number of workspaces. Defaults to the number of connected displays."
+    (unless exwm-workspace-number
+      (custom-set-variables '(exwm-workspace-number (/ (length exwm--randr-displays) 2))))
+
+    (exwm//randr-setup)
+    (exwm//systray-setup)
+    :config
     ;; You may want Emacs to show you the time
     (display-time-mode t)
-    (when exwm-hide-tiling-modeline
-      (add-hook 'exwm-mode-hook #'hidden-mode-line-mode))
 
-    :config
+    (when exwm-hide-tiling-modeline
+      (exwm-layout-hide-mode-line))
+
     (add-hook 'exwm-update-title-hook
               (lambda ()
                 (exwm-workspace-rename-buffer exwm-title)))
 
-    (when 'dotspacemacs-use-ido
-      (exwm-config-ido)
-      ;; Only rename windows intelligently when using ido.
-      ;; When using helm-exwm, the source distinguishes title and class.
-      (add-hook 'exwm-update-class-hook
-                (lambda ()
-                  (unless (or (string-prefix-p "sun-awt-X11-" exwm-instance-name)
-                              (string= "gimp" exwm-instance-name))
-                    (exwm-workspace-rename-buffer exwm-class-name))))
-      (add-hook 'exwm-update-title-hook
-                (lambda ()
-                  (when (or (not exwm-instance-name)
-                            (string-prefix-p "sun-awt-X11-" exwm-instance-name)
-                            (string= "gimp" exwm-instance-name))
-                    (exwm-workspace-rename-buffer exwm-title)))))
-
     ;; Remove ALL bindings
-    (define-key exwm-mode-map "\C-c\C-f" nil)
-    (define-key exwm-mode-map "\C-c\C-h" nil)
-    (define-key exwm-mode-map "\C-c\C-k" nil)
-    (define-key exwm-mode-map "\C-c\C-m" nil)
-    (define-key exwm-mode-map "\C-c\C-q" nil)
-    (define-key exwm-mode-map "\C-c\C-t\C-f" nil)
-    (define-key exwm-mode-map "\C-c\C-t\C-m" nil)
-    ;; Let easy-menu figure out the keys
-    (easy-menu-add-item exwm-mode-menu '()
-                        ["Toggle mode-line" exwm-layout-toggle-mode-line])
-    (easy-menu-add-item exwm-mode-menu '()
-                        ["Move X window to" exwm-workspace-move-window])
-
-    (exwm/exwm-bind-command
-     "s-'"  exwm-terminal-command
-     "<s-return>"  exwm-terminal-command
-     "<XF86MonBrightnessUp>"   "light -A 5"
-     "<XF86MonBrightnessDown>" "light -U 5"
-     "<XF86AudioLowerVolume>" "amixer -D pulse -- sset Master unmute 3%-"
-     "<XF86AudioRaiseVolume>" "amixer -D pulse -- sset Master unmute 3%+"
-     "<XF86AudioMute>"        "amixer -D pulse -- sset Master toggle"
-     "<XF86AudioMicMute>"     "amixer -D pulse -- sset Capture toggle")
-
-    ;; Pass all keypresses to emacs in line mode.
-    (setq exwm-input-line-mode-passthrough t)
-
-
-    ;; `exwm-input-set-key' allows you to set a global key binding (available in
-    ;; any case). Following are a few examples.
-
-    (exwm-input-set-key (kbd "s-i") 'exwm-input-toggle-keyboard)
-    (exwm-input-set-key (kbd "M-m") 'spacemacs-cmds)
-    (exwm-input-set-key (kbd "C-q") 'exwm-input-send-next-key)
-    ;; + We always need a way to go back to line-mode from char-mode
-    (exwm-input-set-key (kbd "s-r") 'exwm-reset)
-
-    (exwm-input-set-key (kbd "s-f") #'exwm/exwm-layout-toggle-fullscreen)
-    (exwm-input-set-key (kbd "<s-tab>") #'exwm/jump-to-last-exwm)
-    ;; + Bind a key to switch workspace interactively
-    (exwm-input-set-key (kbd "s-w") 'exwm-workspace-switch)
-    (exwm-input-set-key (kbd "s-SPC") #'exwm/exwm-app-launcher)
-    (exwm-input-set-key (kbd "s-l") 'exwm/exwm-lock)
+    (define-key exwm-mode-map (kbd "C-c") nil)
 
     ;; set up evil escape
-    (exwm-input-set-key [escape] 'evil-escape)
+    (when (configuration-layer/package-used-p 'evil-escape)
+      (exwm-input-set-key [escape] 'evil-escape))
 
     ;; Bindings available everywhere
     (spacemacs/declare-prefix "W" "EXWM")
@@ -178,13 +145,8 @@
       "Tt" 'exwm-floating-toggle-floating
       "Tm" 'exwm-layout-toggle-mode-line)
 
-    (exwm-randr-enable)
-    (exwm-systemtray-enable)
+    ;; autostart
+    (when exwm-autostart-xdg-applications
+      (add-hook 'exwm-init-hook 'exwm//autostart-xdg-applications t))
 
-    (if exwm-randr-command
-     (start-process-shell-command
-      "xrandr" nil exwm-randr-command))
-
-    (exwm-init)
-    (server-start)
-    ))
+    (server-start)))

@@ -1,6 +1,6 @@
 ## Makefile --- Spacemacs Core
 ##
-## Copyright (c) 2012-2021 Sylvain Benner & Contributors
+## Copyright (c) 2012-2025 Sylvain Benner & Contributors
 ##
 ## Author: Sylvain Benner <sylvain.benner@gmail.com>
 ## URL: https://github.com/syl20bnr/spacemacs
@@ -20,14 +20,11 @@
 ## You should have received a copy of the GNU General Public License
 ## along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-TEST_DIR := $(shell dirname $(realpath $(lastword $(MAKEFILE_LIST))))
+TEST_DIR := $(shell dirname "$(realpath $(lastword $(MAKEFILE_LIST)))" \
+	| sed 's/ /\\ /g')
 
-LOAD_FILES = init.el
-UNIT_TEST_FILES = \
-  evil-evilified-state-utest.el \
-  line-numbers-utest.el \
-  spacebind-utest.el
-FUNC_TEST_FILES = \
-  evil-evilified-state-ftest.el
+LOAD_FILES = early-init.el init.el
+UNIT_TEST_FILES = $(wildcard *-utest.el)
+FUNC_TEST_FILES = $(wildcard *-ftest.el)
 
 include ../../../../spacemacs.mk

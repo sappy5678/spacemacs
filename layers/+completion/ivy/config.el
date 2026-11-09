@@ -1,6 +1,6 @@
-;;; config.el --- Ivy Layer Configuration File for Spacemacs
+;;; config.el --- Ivy Layer Configuration File for Spacemacs  -*- lexical-binding: nil; -*-
 ;;
-;; Copyright (c) 2012-2021 Sylvain Benner & Contributors
+;; Copyright (c) 2012-2025 Sylvain Benner & Contributors
 ;;
 ;; Author: Sylvain Benner <sylvain.benner@gmail.com>
 ;; URL: https://github.com/syl20bnr/spacemacs
@@ -25,6 +25,9 @@
 
 ;; Layer Variables
 
+(defvar ivy-enable-icons nil
+  "If non-nil, enable icons in `ivy-rich-mode'.")
+
 (defvar ivy-enable-advanced-buffer-information nil
   "If non-nil, enable `ivy-rich' which adds information on buffers.")
 
@@ -40,7 +43,6 @@
     ;; see https://github.com/syl20bnr/spacemacs/pull/8065
     ("rg" . "rg --smart-case --no-heading --color never --line-number --max-columns 150 %s %S .")
     ("ag" . "ag --nocolor --nogroup %s %S .")
-    ("pt" . "pt -e --nocolor --nogroup %s %S .")
     ("ack" . "ack --nocolor --nogroup %s %S .")
     ("grep" . "grep -nrP %s %S ."))
   "An alist of search commands and their corresponding commands

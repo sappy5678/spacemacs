@@ -1,8 +1,8 @@
-;;; funcs.el --- CMake Layer functions File for Spacemacs
+;;; funcs.el --- CMake Layer functions File for Spacemacs  -*- lexical-binding: nil; -*-
 ;;
-;; Copyright (c) 2012-2021 Sylvain Benner & Contributors
+;; Copyright (c) 2012-2025 Sylvain Benner & Contributors
 ;;
-;; Author: Maximilian Wolff <smile13241324@gmail.com>
+;; Author: Maxi Wolff <smile13241324@gmail.com>
 ;; URL: https://github.com/syl20bnr/spacemacs
 ;;
 ;; This file is not part of GNU Emacs.
@@ -36,4 +36,4 @@
 (defun spacemacs//cmake-setup-backend ()
   "Conditionally setup cmake backend."
   (when (eq cmake-backend 'lsp)
-    (lsp)))
+    (lsp-deferred)))

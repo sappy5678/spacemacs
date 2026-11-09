@@ -19,6 +19,7 @@
         - [[#basic][Basic]]
         - [[#selecting-an-alternate-lsp-server][Selecting an alternate LSP server]]
         - [[#path-to-lsp-server-executables][Path to LSP server executables]]
+        - [[#indent-line-with-lsp][Indent line with lsp]]
         - [[#semantic-highlighting][Semantic highlighting]]
         - [[#cache-directory-absolute-or-relative][Cache directory (absolute or relative)]]
         - [[#example-dotspacemacs-configuration-layers-entry][Example dotspacemacs-configuration-layers entry]]
@@ -28,6 +29,7 @@
         - [[#microsoft-adapter-installation][Microsoft adapter installation]]
         - [[#codefreak-adapter-installation][CodeFreak adapter installation]]
         - [[#lldb-adapter-installation][LLDB adapter installation]]
+    - [[#eglot][Eglot]]
     - [[#rtags][rtags]]
       - [[#external-dependencies-1][External dependencies]]
       - [[#configuration-1][Configuration]]
@@ -37,6 +39,7 @@
   - [[#enable-google-set-c-style][Enable google-set-c-style]]
   - [[#newlines][Newlines]]
   - [[#projectile-sub-project-adoption][Projectile sub-project adoption]]
+  - [[#source-code-documentation-using-doxygen][Source code documentation using Doxygen]]
 - [[#key-bindings][Key bindings]]
   - [[#lsp-1][LSP]]
     - [[#ccls][ccls]]
@@ -46,10 +49,13 @@
       - [[#gotomember][goto/member]]
     - [[#debugger][debugger]]
   - [[#rtags-1][RTags]]
+  - [[#ycmd][ycmd]]
+  - [[#doxygen][Doxygen]]
   - [[#additional-key-bindings][Additional key bindings]]
     - [[#disassemble][Disassemble]]
     - [[#formatting-clang-format][Formatting (clang-format)]]
     - [[#open-matching-files][Open matching files]]
+    - [[#cscope][cscope]]
     - [[#refactor][Refactor]]
 
 * Description
@@ -65,10 +71,9 @@ This layer adds configuration for C/C++ language.
 - Auto-completion via company (=auto-completion= layer required)
 - Support code reformatting with [[http://clang.llvm.org/docs/ClangFormat.html][clang-format]].
 - Support for disassembly of code with [[https://github.com/jart/disaster][disaster]].
-- =sematic= layer integration:
+- [[https://www.doxygen.nl][Doxygen]] code documentation comment generation (using [[https://github.com/mp81ss/gendoxy][gendoxy]]).
+- =semantic= layer integration:
   - Function or variable definition at the bottom
-  - Current function cursor is at the top. See [[https://github.com/tuhdo/semantic-stickyfunc-enhance][stickyfunc-demos]] for
-    demos in some programming languages.
   - Support common refactoring with [[https://github.com/tuhdo/semantic-refactor][semantic-refactor]]. See [[https://github.com/tuhdo/semantic-refactor/blob/master/srefactor-demos/demos.org][srefactor-demos]] for
     demonstration of refactoring features.
 - =cscope= layer integration:
@@ -84,6 +89,7 @@ file.
 Supported backends are:
 - =lsp-clangd= using clangd LSP server
 - =lsp-ccls= using ccls LSP server
+- =eglot= using the emacs builtin eglot with the clangd LSP server
 - =rtags= using [[https://github.com/Andersbakken/rtags][rtags]]
 - =ycmd= using [[https://github.com/abingham/emacs-ycmd][emacs-ycmd]]
 
@@ -94,7 +100,9 @@ To choose a default backend set the layer variable =c-c++-backend=:
 #+END_SRC
 
 Alternatively the =lsp-clangd= backend will be automatically chosen if the layer
-=lsp= is used and you did not specify any value for =c-c++-backend=.
+=lsp= is used and you did not specify any value for =c-c++-backend=. Otherwise
+the =eglot= backend will be selected if the layer =eglot= is used and you did
+not specify the =c-c++-backend=.
 
 *Note:* It is recommended to use a modern backend like the =lsp= ones.
 
@@ -172,6 +180,11 @@ variable:
 | clangd | =lsp-clients-clangd-executable= |
 | ccls   | =ccls-executable=               |
 
+***** Indent line with lsp
+To indent a line using LSP, set the layer variable
+=c-c++-formatter-indent-line= to a non-nil value.
+This enables indentation according to the LSP formatting feature.
+
 ***** Semantic highlighting
 Currently only available for =lsp-ccls= and =clangd=. Semantic highlighting
 can precisely highlight identifiers.
@@ -243,6 +256,21 @@ Alternatively build directly following the [[https://github.com/llvm/llvm-projec
 
 Adjust the =dap-lldb-debug-program= variable to match the executable.
 
+*** Eglot
+Eglot support is provided via the [[file:../../+tools/eglot/README.org][eglot layer]].
+
+To enable the eglot backend set the layer variable =c-c++-backend= to =eglot=:
+
+#+BEGIN_SRC elisp
+  (c-c++ :variables c-c++-backend 'eglot)
+#+END_SRC
+
+Alternatively, add the =eglot= layer to =dotspacemacs-configuration-layers= and
+the =eglot= backend will be selected automatically if no other backend is set.
+
+The default key bindings for the eglot backend are defined in the
+[[file:../../+tools/eglot/README.org][eglot layer]].
+
 *** rtags
 rtags is a well established clang-based source code indexing tool.
 
@@ -303,6 +331,13 @@ style defined in a =.clang-format= file. This file is either located in the same
 directory as the file being edited, or in any of its parent directories. If no
 =.clang-format= file is found, then a default style will be used.
 
+To enable indentation with clang-format, set =c-c++-formatter-indent-line= to =t=:
+
+#+BEGIN_SRC emacs-lisp
+  (setq-default dotspacemacs-configuration-layers
+                '((c-c++ :variables c-c++-formatter-indent-line t)))
+#+END_SRC
+
 To enable automatic buffer formatting on save, set the variable
 =c-c++-enable-clang-format-on-save= to =t=:
 
@@ -323,7 +358,7 @@ may want =google-c-style= enabled and added to your common hooks.
 To get =google-c-style= actually install itself into your C/C++ common hooks,
 you need to have =c-c++-enable-google-style= defined to true when you load the
 C-C++ lang in Spacemacs. In your =~/.spacemacs= file, a possible way that this
-would look is that in your list of =dostpacemacs-configuration-layers= you have
+would look is that in your list of =dotspacemacs-configuration-layers= you have
 an entry like
 
 #+BEGIN_SRC emacs-lisp
@@ -357,6 +392,9 @@ set =c-c++-adopt-subprojects= to =t=.
 
 This is based on a recommendation on the =ccls= wikis, but should be more
 generally applicable.
+
+** Source code documentation using Doxygen
+The =gendoxy= package allows automatic generation of structured code documentation comments suitable for post-processing using [[https://www.doxygen.nl][Doxygen]]. Key bindings have been provided to insert a file header comment, to document a definition (function, struct, enum etc.) or a group. See the [[https://github.com/mp81ss/gendoxy][gendoxy documentation]] for further information.
 
 * Key bindings
 ** LSP
@@ -491,6 +529,24 @@ A ~[ccls]~ suffix indicates that the binding is for the indicated backend only.
 | ~SPC m g X~ | fix fixit at point              |
 | ~SPC m g Y~ | cycle overlays on screen        |
 
+** ycmd
+
+| Key binding | Description    |
+|-------------+----------------|
+| ~SPC m g G~ | goto imprecise |
+
+** Doxygen
+
+| Key binding | Description                                                         |
+|-------------+---------------------------------------------------------------------|
+| ~SPC m i h~ | document this file (i.e. insert header comment)                     |
+| ~SPC m i d~ | document declaration at point (function, struct etc.)               |
+| ~SPC m i D~ | document declaration at point (header only, omit e.g. enum members) |
+| ~SPC m i g~ | document group of declarations at point                             |
+| ~SPC m i G~ | document group of declarations at point (header only)               |
+| ~SPC m i s~ | document start of declaration group                                 |
+| ~SPC m i e~ | document end of declaration group                                   |
+
 ** Additional key bindings
 *** Disassemble
 
@@ -513,6 +569,12 @@ A ~[ccls]~ suffix indicates that the binding is for the indicated backend only.
 |             | (e.g. switch between .cpp and .h, requires a project to work) |
 | ~SPC m g A~ | open matching file in another window                          |
 |             | (e.g. switch between .cpp and .h, requires a project to work) |
+
+*** cscope
+
+| Key binding | Description        |
+|-------------+--------------------|
+| ~SPC m g i~ | cscope index files |
 
 *** Refactor
 

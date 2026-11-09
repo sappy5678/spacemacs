@@ -1,6 +1,6 @@
-;;; packages.el --- kubernetes layer packages file for Spacemacs.
+;;; packages.el --- kubernetes layer packages file for Spacemacs.  -*- lexical-binding: nil; -*-
 ;;
-;; Copyright (c) 2012-2021 Sylvain Benner & Contributors
+;; Copyright (c) 2012-2025 Sylvain Benner & Contributors
 ;;
 ;; Author: Matt Bray <mattjbray@gmail.com>
 ;; URL: https://github.com/syl20bnr/spacemacs
@@ -26,8 +26,7 @@
 (defconst kubernetes-packages
   '(
     kubernetes
-    kubernetes-evil
-    kubernetes-tramp))
+    kubernetes-evil))
 
 (defun kubernetes/init-kubernetes ()
   (use-package kubernetes
@@ -40,7 +39,3 @@
 (defun kubernetes/init-kubernetes-evil ()
   (use-package kubernetes-evil
     :after kubernetes-overview))
-
-(defun kubernetes/init-kubernetes-tramp ()
-  (use-package kubernetes-tramp
-    :defer t))

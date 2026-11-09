@@ -1,6 +1,6 @@
-;;; funcs.el --- Perl5 Layer functions File for Spacemacs
+;;; funcs.el --- Perl5 Layer functions File for Spacemacs  -*- lexical-binding: nil; -*-
 ;;
-;; Copyright (c) 2012-2021 Sylvain Benner & Contributors
+;; Copyright (c) 2012-2025 Sylvain Benner & Contributors
 ;;
 ;; Author: Eivind Fonn <evfonn@gmail.com>
 ;; URL: https://github.com/syl20bnr/spacemacs
@@ -36,7 +36,7 @@
 (defun spacemacs//perl5-setup-backend ()
   "Conditionally setup perl5 backend."
   (when (eq perl5-backend 'lsp)
-    (lsp)))
+    (lsp-deferred)))
 
 (defun spacemacs//perl5-setup-dap ()
   "Conditionally setup perl5 DAP integration."

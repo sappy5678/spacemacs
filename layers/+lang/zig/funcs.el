@@ -1,6 +1,6 @@
-;;; funcs.el --- zig Layer functions File for Spacemacs
+;;; funcs.el --- zig Layer functions File for Spacemacs  -*- lexical-binding: nil; -*-
 ;;
-;; Copyright (c) 2012-2021 Sylvain Benner & Contributors
+;; Copyright (c) 2012-2025 Sylvain Benner & Contributors
 ;;
 ;; Author: Riccardo Binetti <rbino@gmx.com>
 ;; URL: https://github.com/syl20bnr/spacemacs
@@ -30,5 +30,5 @@
 (defun spacemacs//zig-setup-zls ()
   "Setup LSP zls."
   (if (configuration-layer/layer-used-p 'lsp)
-      (lsp)
+      (lsp-deferred)
     (message "`lsp' layer is not installed, please add `lsp' layer to your dotfile.")))

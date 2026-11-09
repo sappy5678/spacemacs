@@ -1,6 +1,6 @@
-;;; layers.el --- Python Layer declarations File for Spacemacs
+;;; layers.el --- Python Layer declarations File for Spacemacs  -*- lexical-binding: t; -*-
 ;;
-;; Copyright (c) 2012-2021 Sylvain Benner & Contributors
+;; Copyright (c) 2012-2025 Sylvain Benner & Contributors
 ;;
 ;; Author: Sylvain Benner <sylvain.benner@gmail.com>
 ;; URL: https://github.com/syl20bnr/spacemacs
@@ -21,6 +21,6 @@
 ;; along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 
-(when (and (boundp 'python-backend)
-           (eq python-backend 'lsp))
-  (configuration-layer/declare-layer-dependencies '(dap)))
+(cl-case (bound-and-true-p python-backend)
+  (lsp (configuration-layer/declare-layer-dependencies '(lsp)))
+  (eglot (configuration-layer/declare-layer-dependencies '(eglot))))

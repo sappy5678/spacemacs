@@ -1,6 +1,6 @@
-;;; funcs.el --- Java functions File for Spacemacs
+;;; funcs.el --- Java functions File for Spacemacs  -*- lexical-binding: nil; -*-
 ;;
-;; Copyright (c) 2012-2021 Sylvain Benner & Contributors
+;; Copyright (c) 2012-2025 Sylvain Benner & Contributors
 ;;
 ;; Author: Lukasz Klich <klich.lukasz@gmail.com>
 ;; URL: https://github.com/syl20bnr/spacemacs
@@ -101,7 +101,7 @@
   (if (configuration-layer/layer-used-p 'lsp)
       (progn
         (require 'lsp-java)
-        (lsp))
+        (lsp-deferred))
     (message "`lsp' layer is not installed, please add `lsp' layer to your dotfile.")))
 
 (defun spacemacs//java-setup-lsp-dap ()
@@ -120,3 +120,13 @@
   "Setup LSP Java syntax checking."
   (unless (configuration-layer/layer-used-p 'lsp)
     (message "`lsp' layer is not installed, please add `lsp' layer to your dotfile.")))
+
+(defun spacemacs/lsp-java-super-type ()
+  "Show super type hierarchy."
+  (interactive)
+  (lsp-java-type-hierarchy 1))
+
+(defun spacemacs/lsp-java-sub-type ()
+  "Show sub type hierarchy."
+  (interactive)
+  (lsp-java-type-hierarchy 0))

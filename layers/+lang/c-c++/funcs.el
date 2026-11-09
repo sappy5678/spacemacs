@@ -1,6 +1,6 @@
-;;; funcs.el --- C/C++ Layer functions File for Spacemacs
+;;; funcs.el --- C/C++ Layer functions File for Spacemacs  -*- lexical-binding: nil; -*-
 ;;
-;; Copyright (c) 2012-2021 Sylvain Benner & Contributors
+;; Copyright (c) 2012-2025 Sylvain Benner & Contributors
 ;;
 ;; Author: Sylvain Benner <sylvain.benner@gmail.com>
 ;; URL: https://github.com/syl20bnr/spacemacs
@@ -29,12 +29,14 @@
   (pcase c-c++-backend
     ('lsp-clangd (spacemacs//c-c++-setup-lsp-clangd))
     ('lsp-ccls (spacemacs//c-c++-setup-lsp-ccls))
+    ('eglot (spacemacs//c-c++-setup-eglot))
     ('rtags (spacemacs//c-c++-setup-rtags))
     ('ycmd (spacemacs//c-c++-setup-ycmd))))
 
 (defun spacemacs//c-c++-setup-company ()
   "Conditionally setup C/C++ company integration based on backend."
   (pcase c-c++-backend
+    ('eglot (spacemacs//c-c++-setup-eglot-company))
     ('rtags (spacemacs//c-c++-setup-rtags-company))
     ('ycmd (spacemacs//c-c++-setup-ycmd-company))))
 
@@ -81,7 +83,7 @@
    "c-c++" "lsp-clangd"
    'clangd-other-file "textDocument/switchSourceHeader" 'buffer-file-name)
   (setq-local lsp-disabled-clients '(ccls))
-  (lsp))
+  (lsp-deferred))
 
 ;; ccls
 
@@ -162,14 +164,27 @@
      "mf" 'member-functions
      "mv" 'member-vars))
 
-  ;;(evil-set-initial-state 'ccls--tree-mode 'emacs)
+  (evil-set-initial-state 'ccls-tree-mode 'emacs)
   ;;(evil-make-overriding-map 'ccls-tree-mode-map)
   (setq-local lsp-disabled-clients '(clangd))
-  (lsp))
+  (lsp-deferred))
 
 (defun spacemacs//c-c++-setup-lsp-dap ()
   "Setup DAP integration."
   (mapc #'require c-c++-dap-adapters))
+
+
+;; eglot
+
+(defun spacemacs//c-c++-setup-eglot ()
+  "Setup eglot backend."
+  (eglot-ensure))
+
+(defun spacemacs//c-c++-setup-eglot-company ()
+  "Setup eglot auto-completion."
+  (spacemacs|add-company-backends
+    :backends company-capf
+    :modes c-mode-common))
 
 
 ;; rtags
@@ -331,6 +346,13 @@
   "Toggle auto-newline."
   (c-toggle-auto-newline 1))
 
+(defun spacemacs//c-c++-setup-formatter-indent-line ()
+  "Setup `indent-line-function' with the formatter indent function."
+  (setq-local indent-line-function
+              `(lambda (&rest args)
+                 (or (spacemacs//c-c++-formatter-indent-line args)
+                     (apply ,(symbol-function indent-line-function) args)))))
+
 
 ;; clang
 
@@ -361,8 +383,8 @@
         (progn
           (clang-format-region (region-beginning) (region-end) style)
           (message "Formatted region"))
-        (clang-format-buffer style)
-        (message "Formatted buffer %s" (buffer-name)))))
+      (clang-format-buffer style)
+      (message "Formatted buffer %s" (buffer-name)))))
 
 (defun spacemacs//clang-format-on-save ()
   "Format the current buffer with clang-format on save when
@@ -400,3 +422,13 @@ is non-nil."
   "Add before-save hook for c-c++-organize-includes."
   (add-hook 'before-save-hook
             #'spacemacs//c-c++-organize-includes-on-save nil t))
+
+(defun spacemacs//c-c++-formatter-indent-line (&rest _)
+  "Indent current line with `lsp-format-region' or `clang-format-region'."
+  (when-let* ((fun (cond ((bound-and-true-p lsp-mode) #'lsp-format-region)
+                         ((and (fboundp 'clang-format-region)
+                               (executable-find "clang-format"))
+                          #'clang-format-region))))
+    (call-interactively fun)
+    ;; return `t' to say "indent" been applied
+    t))

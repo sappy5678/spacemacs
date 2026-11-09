@@ -1,6 +1,6 @@
-;;; funcs.el --- Emoji Layer functions File for Spacemacs
+;;; funcs.el --- Emoji Layer functions File for Spacemacs  -*- lexical-binding: nil; -*-
 ;;
-;; Copyright (c) 2012-2021 Sylvain Benner & Contributors
+;; Copyright (c) 2012-2025 Sylvain Benner & Contributors
 ;;
 ;; Author: Sylvain Benner <sylvain.benner@gmail.com>
 ;; URL: https://github.com/syl20bnr/spacemacs
@@ -48,3 +48,9 @@ properly."
   ;; If we directly call the emoji mode at hook runtime then some
   ;; text properties are not applied correctly.
   (run-at-time 0.1 nil 'emoji-cheat-sheet-plus-display-mode))
+
+(defun spacemacs/emoji-insert-and-possibly-complete (_)
+  "Use company-emoji to complete 'to' unicode."
+  (when company-emoji-insert-unicode
+    (delete-char -1)
+    (company-complete)))

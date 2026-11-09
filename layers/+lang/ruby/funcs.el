@@ -1,6 +1,6 @@
-;;; funcs.el --- Ruby Layer functions File
+;;; funcs.el --- Ruby Layer functions File  -*- lexical-binding: nil; -*-
 ;;
-;; Copyright (c) 2012-2021 Sylvain Benner & Contributors
+;; Copyright (c) 2012-2025 Sylvain Benner & Contributors
 ;;
 ;; Author: Sylvain Benner <sylvain.benner@gmail.com>
 ;; URL: https://github.com/syl20bnr/spacemacs
@@ -35,7 +35,7 @@
   "Configure backend company"
   ;; Company is automatically set up by lsp
   (when (eq ruby-backend 'robe)
-      (spacemacs//ruby-setup-robe-company)))
+    (spacemacs//ruby-setup-robe-company)))
 
 (defun spacemacs//ruby-setup-dap ()
   "Conditionally setup elixir DAP integration."
@@ -49,7 +49,7 @@
 (defun spacemacs//ruby-setup-lsp ()
   "Setup Ruby lsp."
   (if (configuration-layer/layer-used-p 'lsp)
-      (lsp)
+      (lsp-deferred)
     (message "`lsp' layer is not installed, please add `lsp' layer to your dotfile.")))
 
 (defun spacemacs//ruby-setup-lsp-dap ()
@@ -138,9 +138,9 @@ Called interactively it prompts for a directory."
   "Highlight break point lines."
   (interactive)
   (when ruby-highlight-debugger-keywords
-    (highlight-lines-matching-regexp "byebug")
-    (highlight-lines-matching-regexp "binding.irb")
-    (highlight-lines-matching-regexp "binding.pry")))
+    (highlight-lines-matching-regexp "^\s*byebug")
+    (highlight-lines-matching-regexp "^\s*binding.irb")
+    (highlight-lines-matching-regexp "^\s*binding.pry")))
 
 
 ;; Insert text

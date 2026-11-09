@@ -1,6 +1,6 @@
-;;; funcs.el --- Shell Layer functions File
+;;; funcs.el --- Shell Layer functions File  -*- lexical-binding: nil; -*-
 ;;
-;; Copyright (c) 2012-2021 Sylvain Benner & Contributors
+;; Copyright (c) 2012-2025 Sylvain Benner & Contributors
 ;;
 ;; Author: Sylvain Benner <sylvain.benner@gmail.com>
 ;; URL: https://github.com/syl20bnr/spacemacs
@@ -22,24 +22,34 @@
 
 
 (defun spacemacs/projectile-shell-pop ()
-  "Open a term buffer at projectile project root."
+  "Pop-up a shell buffer at the project root.
+Customize `shell-default-shell' to control what type of shell
+buffer you create. This function will pop-up a full-width buffer
+and move your focus to it; to switch the current buffer view, use
+`spacemacs/projectile-shell'."
   (interactive)
-  (let ((default-directory (projectile-project-root)))
+  (let ((default-directory (projectile-acquire-root)))
     (call-interactively 'spacemacs/default-pop-shell)))
+
+(defun spacemacs/projectile-shell ()
+  "Create a shell buffer at the project root and switch to it.
+Customize `shell-default-shell' to control what type of shell
+buffer you create. This function switches the current buffer
+view; to pop-up a full width buffer, use
+`spacemacs/projectile-shell-pop'."
+  (interactive)
+  (pcase shell-default-shell
+    ((or 'multi-term 'multi-vterm)
+     (projectile-with-default-dir (projectile-acquire-root)
+       (call-interactively shell-default-shell)))
+    ('eat (call-interactively #'eat-project))
+    (_ (call-interactively (or (intern-soft (format "projectile-run-%s" shell-default-shell))
+                               #'projectile-run-shell)))))
 
 (defun spacemacs/disable-hl-line-mode ()
   "Locally disable global-hl-line-mode"
   (interactive)
   (setq-local global-hl-line-mode nil))
-
-(defun spacemacs/init-eshell-xterm-color ()
-  "Initialize xterm coloring for eshell"
-  (setq-local xterm-color-preserve-properties t)
-  (make-local-variable 'eshell-preoutput-filter-functions)
-  (add-hook 'eshell-preoutput-filter-functions 'xterm-color-filter)
-  (setq-local eshell-output-filter-functions
-              (remove 'eshell-handle-ansi-color
-                      eshell-output-filter-functions)))
 
 (defun ansi-term-handle-close ()
   "Close current term buffer when `exit' from term buffer."
@@ -49,21 +59,28 @@
                             (when (string-match "\\(finished\\|exited\\)"
                                                 change)
                               (kill-buffer (process-buffer proc))
-                              (when (and close-window-with-terminal
+                              (when (and shell-close-window-with-terminal
                                          (> (count-windows) 1))
                                 (delete-window)))))))
 
 (defun spacemacs/default-pop-shell ()
-  "Open the default shell in a popup."
+  "Open the default shell in a popup using `shell-pop'.
+Additionally changes to working directory when the value of
+`shell-pop-autocd-to-working-dir' is non-nil (default)."
   (interactive)
   (let ((shell (cl-case shell-default-shell
-                 ('multi-term 'multiterm)
-                 ('shell 'inferior-shell)
+                 (multi-vterm 'multivterm)
+                 (multi-term 'multiterm)
+                 (shell 'inferior-shell)
                  (t shell-default-shell))))
     (call-interactively (intern (format "spacemacs/shell-pop-%S" shell)))))
 
 (defun spacemacs/resize-shell-to-desired-width ()
-  (when (and (string= (buffer-name) shell-pop-last-shell-buffer-name)
+  ;; `shell-pop--is-shell-buffer' is a buffer-local flag set by shell-pop on
+  ;; managed buffers (replaces the removed `shell-pop-last-shell-buffer-name'
+  ;; comparison). `bound-and-true-p' keeps this safe on shell-pop versions
+  ;; that predate the rewrite.
+  (when (and (bound-and-true-p shell-pop--is-shell-buffer)
              (memq shell-pop-window-position '(left right)))
     (enlarge-window-horizontally (- (/ (* (frame-width) shell-default-width)
                                        100)
@@ -98,10 +115,16 @@ SHELL is the SHELL function to use (i.e. when FUNC represents a terminal)."
        (shell-pop index)
        (spacemacs/resize-shell-to-desired-width))))
 
-(defun projectile-multi-term-in-root ()
-  "Invoke `multi-term' in the project's root."
-  (interactive)
-  (projectile-with-default-dir (projectile-project-root) (multi-term)))
+(defun spacemacs//eat-for-shell-pop (&rest args)
+  "Like `eat', but make the new shell buffer current.
+
+Used to satisfy `shell-pop's assumptions."
+  ;; `eat' unexpectedly selects the window displaying the returned buffer, but
+  ;; doesn't actually leave the buffer current when it returns.  The fix is
+  ;; suggested upstream at https://codeberg.org/akib/emacs-eat/pulls/193, but
+  ;; meanwhile we work around it in Spacemacs.  We can replace this function at
+  ;; its callsite with just `eat' if/when the above is merged.
+  (set-buffer (apply #'eat args)))
 
 (defun spacemacs//toggle-shell-auto-completion-based-on-path ()
   "Deactivates automatic completion on remote paths.
@@ -147,14 +170,11 @@ is achieved by adding the relevant text properties."
 (defun spacemacs//init-eshell ()
   "Stuff to do when enabling eshell."
   (setq pcomplete-cycle-completions nil)
-  (if (bound-and-true-p linum-mode) (linum-mode -1))
   ;; autojump to prompt line if not on one already
   (add-hook 'evil-insert-state-entry-hook
             'spacemacs//eshell-auto-end nil t)
   (add-hook 'evil-hybrid-state-entry-hook
             'spacemacs//eshell-auto-end nil t)
-  (when (configuration-layer/package-used-p 'semantic)
-    (semantic-mode -1))
   ;; This is an eshell alias
   (defun eshell/clear ()
     (let ((inhibit-read-only t))
@@ -193,7 +213,7 @@ is achieved by adding the relevant text properties."
   (spacemacs/set-leader-keys-for-major-mode 'eshell-mode
     "H" 'spacemacs/helm-eshell-history)
   (define-key eshell-mode-map
-    (kbd "M-l") 'spacemacs/helm-eshell-history))
+              (kbd "M-l") 'spacemacs/helm-eshell-history))
 
 (defun spacemacs/ivy-eshell-history ()
   (interactive)
@@ -212,6 +232,25 @@ is achieved by adding the relevant text properties."
   (define-key eshell-mode-map (kbd "M-l") #'spacemacs/ivy-eshell-history)
   (define-key eshell-mode-map (kbd "<tab>") #'spacemacs/pcomplete-std-complete))
 
+(defun spacemacs/consult-eshell-history ()
+  "Correctly revert to insert state after selection."
+  (interactive)
+  (consult-history)
+  (evil-insert-state))
+
+(defun spacemacs/consult-shell-history ()
+  "Correctly revert to insert state after selection."
+  (interactive)
+  (consult-history)
+  (evil-insert-state))
+
+(defun spacemacs/init-consult-eshell ()
+  "Initialize consult-eshell."
+  (spacemacs/set-leader-keys-for-major-mode 'eshell-mode
+    "H" 'spacemacs/consult-eshell-history)
+  (define-key eshell-mode-map
+              (kbd "M-l") 'spacemacs/consult-eshell-history))
+
 (defun term-send-tab ()
   "Send tab in term mode."
   (interactive)
@@ -223,13 +262,23 @@ is achieved by adding the relevant text properties."
   (interactive)
   (multi-term))
 
+(defun multivterm (&optional ARG)
+  "Wrapper to be able to call multi-vterm from shell-pop"
+  (interactive)
+  (multi-vterm))
+
+(defun multighostel (&optional _)
+  "Wrapper to call ghostel with `t' to create a new ghostel frame"
+  (interactive)
+  (ghostel t))
+
 (defun inferior-shell (&optional ARG)
   "Wrapper to open shell in current window"
   (interactive)
   (switch-to-buffer "*shell*")
   (shell "*shell*"))
 
-;; https://stackoverflow.com/questions/6837511/automatically-disable-a-global-minor-mode-for-a-specific-major-mode
+;; https://stackoverflow.com/a/6839968
 (defun spacemacs//inhibit-global-centered-cursor-mode ()
   "Counter-act `global-centered-cursor-mode'."
   (add-hook 'after-change-major-mode-hook
@@ -238,13 +287,14 @@ is achieved by adding the relevant text properties."
             :append
             :local))
 
-(defun spacemacs//shell-pop-restore-window ()
-  "Fixes an issue during `shell-pop-out' where it
-tries to restore a dead buffer or window."
-  (unless (buffer-live-p shell-pop-last-buffer)
-    (setq shell-pop-last-buffer (window-buffer (get-mru-window nil t t))))
-  (unless (window-live-p shell-pop-last-window)
-    (setq shell-pop-last-window (get-buffer-window shell-pop-last-buffer))))
+(defun spacemacs/ghostel-switch-buffer ()
+  "Switch between the multi-vterm buffers."
+  (interactive)
+  (pop-to-buffer-same-window
+   (completing-read "Ghostel buffer: "
+                    (mapcar 'buffer-name
+                            (remq (current-buffer) (ghostel-buffer-list)))
+                    nil t)))
 
 (defun spacemacs//vterm-make-history-candidates ()
   (with-temp-buffer
@@ -253,20 +303,29 @@ tries to restore a dead buffer or window."
      (delete-dups
       (split-string (buffer-string) "\n")))))
 
+(defun spacemacs/multi-vterm-switch-buffer ()
+  "Switch between the multi-vterm buffers."
+  (interactive)
+  (pop-to-buffer-same-window
+   (completing-read "Vterm buffer: "
+                    (mapcar 'buffer-name
+                            (remq (current-buffer) multi-vterm-buffer-list))
+                    nil t)))
+
 (defun spacemacs/helm-vterm-search-history ()
   "Narrow down bash history with helm."
   (interactive)
-  (assert (string-equal mode-name "VTerm") nil "Not in VTerm mode")
+  (cl-assert (string-equal mode-name "VTerm") nil "Not in VTerm mode")
   (helm :sources (helm-build-sync-source "Bash history"
-                                         :candidates (spacemacs//vterm-make-history-candidates)
-                                         :action #'vterm-send-string)
+                   :candidates (spacemacs//vterm-make-history-candidates)
+                   :action #'vterm-send-string)
         :buffer "*helm-bash-history*"
         :candidate-number-limit 10000))
 
 (defun spacemacs/counsel-vterm-search-history ()
   "Narrow down bash history with ivy."
   (interactive)
-  (assert (string-equal mode-name "VTerm") nil "Not in VTerm mode")
+  (cl-assert (string-equal mode-name "VTerm") nil "Not in VTerm mode")
   (ivy-read "Bash history: "
             (spacemacs//vterm-make-history-candidates)
             :keymap counsel-describe-map
@@ -282,3 +341,11 @@ tries to restore a dead buffer or window."
     (define-key mode-map (kbd "M-r") 'spacemacs/helm-vterm-search-history))
    ((configuration-layer/layer-used-p 'ivy)
     (define-key mode-map (kbd "M-r") 'spacemacs/counsel-vterm-search-history))))
+
+(defun spacemacs/shell-pop-with-eshell-history-write (orig-fun &rest args)
+  "Make sure that the eshell history is written before the window is closed."
+  (unless (one-window-p)
+    (when (string= shell-pop-internal-mode "eshell")
+      (eshell-write-history)
+      (eshell-write-last-dir-ring)
+      (apply orig-fun args))))

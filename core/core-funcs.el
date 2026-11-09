@@ -1,6 +1,6 @@
-;;; core-funcs.el --- Spacemacs Core File
+;;; core-funcs.el --- Spacemacs Core File -*- lexical-binding: t -*-
 ;;
-;; Copyright (c) 2012-2021 Sylvain Benner & Contributors
+;; Copyright (c) 2012-2025 Sylvain Benner & Contributors
 ;;
 ;; Author: Sylvain Benner <sylvain.benner@gmail.com>
 ;; URL: https://github.com/syl20bnr/spacemacs
@@ -20,21 +20,28 @@
 ;; You should have received a copy of the GNU General Public License
 ;; along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-
-(defvar configuration-layer--protected-packages)
-(defvar dotspacemacs-filepath)
 (defvar spacemacs-repl-list '()
   "List of all registered REPLs.")
 
 (defmacro spacemacs|dotspacemacs-backward-compatibility (variable default)
   "Return `if' sexp for backward compatibility with old dotspacemacs
 values."
+  (declare (obsolete nil "The `spacemacs|dotspacemacs-backward-compatibility' macro will be removed after 2025.
+Please reinstall the package which relies on this macro (such as `hybrid-mode')"))
+  ;; Display a warning in addition to the obsolete declaration.  This macro is
+  ;; used in autoload forms in `hybrid-mode' which are interpreted (not
+  ;; byte-compiled).
+  (warn "The `spacemacs|dotspacemacs-backward-compatibility' macro will be removed after 2025.
+Please reinstall the package which relies on this macro (such as `hybrid-mode')")
   `(if (boundp ',variable) ,variable ',default))
 
 (defun spacemacs/system-is-mac ()
   (eq system-type 'darwin))
+
 (defun spacemacs/system-is-linux ()
-  (eq system-type 'gnu/linux))
+  (or  (eq system-type 'gnu/linux)
+       (eq system-type 'android)))
+
 (defun spacemacs/system-is-mswindows ()
   (eq system-type 'windows-nt))
 
@@ -94,14 +101,19 @@ and its values are removed."
       (push (pop tail) result))
     (nreverse result)))
 
-;; Originally based on http://stackoverflow.com/questions/2321904/elisp-how-to-save-data-in-a-file
+;; Originally based on https://stackoverflow.com/a/2322164
 (defun spacemacs/dump-vars-to-file (varlist filename)
-  "simplistic dumping of variables in VARLIST to a file FILENAME"
-  (with-temp-file filename
-    (spacemacs/dump-vars varlist (current-buffer))
-    (make-directory (file-name-directory filename) t)))
+  "Simplistic dumping of variables in VARLIST to a file FILENAME."
+  ;; Write even when the file is locked by another Emacs.  Don't bother to
+  ;; prompt the user.
+  (cl-letf (((symbol-function #'ask-user-about-lock) #'always))
+    (with-temp-file filename
+      (spacemacs/dump-vars varlist (current-buffer))
+      (delay-mode-hooks (emacs-lisp-mode))
+      (elisp-enable-lexical-binding)
+      (make-directory (file-name-directory filename) t))))
 
-;; From http://stackoverflow.com/questions/2321904/elisp-how-to-save-data-in-a-file
+;; From https://stackoverflow.com/a/2322164
 (defun spacemacs/dump-vars (varlist buffer)
   "insert into buffer the setq statement to recreate the variables in VARLIST"
   (cl-loop for var in varlist do
@@ -163,7 +175,7 @@ The buffer's major mode should be `org-mode'."
   (if (require 'space-doc nil t)
       (space-doc-mode)
     ;; Make ~SPC ,~ work, reference:
-    ;; http://stackoverflow.com/questions/24169333/how-can-i-emphasize-or-verbatim-quote-a-comma-in-org-mode
+    ;; https://stackoverflow.com/a/24173780
     (setcar (nthcdr 2 org-emphasis-regexp-components) " \t\n")
     (org-set-emph-re 'org-emphasis-regexp-components org-emphasis-regexp-components)
     (setq-local org-emphasis-alist '(("*" bold)
@@ -217,7 +229,7 @@ passed-tests and total-tests."
         (var-val (symbol-value var)))
     (when (boundp 'total-tests) (setq total-tests (1+ total-tests)))
     (insert (format "** TEST: [[file:%s::%s][%s]] %s\n"
-                    dotspacemacs-filepath var-name var-name test-desc))
+                    (dotspacemacs/location) var-name var-name test-desc))
     (if (funcall pred var-val)
         (progn
           (when (boundp 'passed-tests) (setq passed-tests (1+ passed-tests)))
@@ -232,10 +244,10 @@ result, incrementing passed-tests and total-tests."
         (varlist-val (symbol-value varlist)))
     (if element-desc
         (insert (format "** TEST: Each %s in [[file:%s::%s][%s]] %s\n"
-                        element-desc dotspacemacs-filepath varlist-name
+                        element-desc (dotspacemacs/location) varlist-name
                         varlist-name test-desc))
       (insert (format "** TEST: Each element of [[file:%s::%s][%s]] %s\n"
-                      dotspacemacs-filepath varlist-name varlist-name
+                      (dotspacemacs/location) varlist-name varlist-name
                       test-desc)))
     (dolist (var varlist-val)
       (when (boundp 'total-tests) (setq total-tests (1+ total-tests)))
@@ -305,7 +317,7 @@ buffer."
           . (,feature . ,repl-func))
         spacemacs-repl-list))
 
-;; http://stackoverflow.com/questions/11847547/emacs-regexp-count-occurrences
+;; https://stackoverflow.com/a/11848341
 (defun spacemacs/how-many-str (regexp str)
   (cl-loop with start = 0
            for count from 0
@@ -319,39 +331,36 @@ buffer."
   (let ((message-log-max nil))
     (apply 'message msg args)))
 
-(defun spacemacs/derived-mode-p (mode &rest modes)
-  "Non-nil if MODE is derived from one of MODES."
-  ;; We could have copied the built-in `derived-mode-p' and modified it a bit so
-  ;; it works on arbitrary modes instead of only the current major-mode. We
-  ;; don't do that because then we will need to modify the function if
-  ;; `derived-mode-p' changes.
-  (let ((major-mode mode))
-    (apply #'derived-mode-p modes)))
+(define-obsolete-function-alias 'spacemacs/derived-mode-p 'provided-mode-derived-p "2024-06")
+
+(defun spacemacs//alternate-buffer-skip (_window buffer _bury-or-kill)
+  "For use as `switch-to-prev-buffer-skip' in `spacemacs/alternate-buffer'."
+  (or (and (bound-and-true-p spacemacs-useful-buffers-restrict-spc-tab)
+           (spacemacs/useless-buffer-p buffer))
+      (and (bound-and-true-p spacemacs-layouts-restrict-spc-tab)
+           (not (member buffer (persp-buffer-list))))))
 
 (defun spacemacs/alternate-buffer (&optional window)
-  "Switch back and forth between current and last buffer in the
-current window.
+  "Switch back and forth between current and last buffer in WINDOW.
 
-If `spacemacs-layouts-restrict-spc-tab' is `t' then this only switches between
-the current layouts buffers."
+If `spacemacs-useful-buffers-restrict-spc-tab' is non-nil, then this
+only switches to useful buffers, see `spacemacs-useful-buffers-regexp'.
+Additionally, if `spacemacs-layouts-restrict-spc-tab' is non-nil, then
+this only switches to the current layout's buffers.
+
+The optional WINDOW parameter for non-interactive calls is deprecated.
+Instead, use `with-selected-window'."
+  (declare (advertised-calling-convention () "2025-10"))
   (interactive)
-  (cl-destructuring-bind (buf start pos)
-      (if (bound-and-true-p spacemacs-layouts-restrict-spc-tab)
-          (let ((buffer-list (persp-buffer-list))
-                (my-buffer (window-buffer window)))
-            ;; find buffer of the same persp in window
-            (seq-find (lambda (it) ;; predicate
-                        (and (not (eq (car it) my-buffer))
-                             (member (car it) buffer-list)))
-                      (window-prev-buffers)
-                      ;; default if found none
-                      (list nil nil nil)))
-        (or (cl-find (window-buffer window) (window-prev-buffers)
-                     :key #'car :test-not #'eq)
-            (list (other-buffer) nil nil)))
-    (if (not buf)
-        (message "Last buffer not found.")
-      (set-window-buffer-start-and-point window buf start pos))))
+  (when window
+    (lwarn '(spacemacs core-funcs)
+           :warning
+           "The WINDOW argument to `spacemacs/alternate-buffer' is deprecated."))
+  (let ((switch-to-prev-buffer-skip #'spacemacs//alternate-buffer-skip))
+    (with-selected-window (or window (selected-window))
+      (set-window-next-buffers nil nil)
+      (previous-buffer)
+      (set-window-next-buffers nil nil))))
 
 (defun spacemacs/alternate-window ()
   "Switch back and forth between current and last window in the
@@ -447,5 +456,20 @@ and a modes mode line name is diminished to:
           (setq second-char (substring str 2 3)) ; second char after the space
           (concat first-char " " second-char))
       str)))
+
+(defun spacemacs//toggle-gui-elements (&optional on-off)
+  "Toggle menu bar, tool bar, scroll bars, and tool tip modes. If
+optional ON-OFF is not specified, then toggle on/off state. If
+ON-OFF is 0 or 1, then turn gui elements OFF or ON respectively."
+  (when (fboundp 'scroll-bar-mode)
+    (scroll-bar-mode (or on-off (not scroll-bar-mode))))
+  (when  (fboundp 'tool-bar-mode)
+    (tool-bar-mode (or on-off (not tool-bar-mode))))
+  (unless (memq (window-system) '(mac ns))
+    (when (fboundp 'menu-bar-mode)
+      (menu-bar-mode (or on-off (not menu-bar-mode)))))
+  ;; tooltips in echo-aera
+  (when (fboundp 'tooltip-mode)
+    (tooltip-mode (or on-off (not tooltip-mode)))))
 
 (provide 'core-funcs)

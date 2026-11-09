@@ -1,6 +1,6 @@
 ## Makefile --- Spacemacs master makefile
 ##
-## Copyright (c) 2012-2021 Sylvain Benner & Contributors
+## Copyright (c) 2012-2025 Sylvain Benner & Contributors
 ##
 ## Author: Sylvain Benner <sylvain.benner@gmail.com>
 ## URL: https://github.com/syl20bnr/spacemacs
@@ -21,8 +21,9 @@
 ## along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 
-EMACS_DIR = $(shell dirname $(realpath $(lastword $(MAKEFILE_LIST))))
-TEST_NAME = `basename $(TEST_DIR) | tr a-z A-Z`
+EMACS_DIR = $(shell dirname "$(realpath $(lastword $(MAKEFILE_LIST)))" \
+	| sed 's/ /\\ /g')
+TEST_NAME = `basename "$(TEST_DIR)" | tr a-z A-Z`
 
 all: test
 
@@ -32,7 +33,8 @@ installation:
 	@echo "================================================================="
 	@echo "INSTALLATION OF PACKAGES FOR $(TEST_NAME)"
 	@echo "================================================================="
-	@emacs -batch \
+	SPACEMACSDIR=$(TEST_DIR) emacs -Q -batch \
+		--eval '(setq package-check-signature nil)' \
 		$(addprefix -l $(EMACS_DIR)/, $(LOAD_FILES))
 
 ifneq ($(strip $(UNIT_TEST_FILES)),)
@@ -40,7 +42,7 @@ unit_tests:
 	@echo "================================================================="
 	@echo "UNIT TESTS FOR $(TEST_NAME)"
 	@echo "================================================================="
-	emacs -batch -l ert \
+	SPACEMACSDIR=$(TEST_DIR) emacs -Q -batch -l ert \
 		$(addprefix -l $(EMACS_DIR)/, $(LOAD_FILES)) \
 		$(addprefix -l $(TEST_DIR)/, $(UNIT_TEST_FILES)) \
 		-f ert-run-tests-batch-and-exit
@@ -51,7 +53,7 @@ func_tests:
 	@echo "================================================================="
 	@echo "FUNCTIONAL TESTS FOR $(TEST_NAME)"
 	@echo "================================================================="
-	@emacs -batch -l ert \
+	SPACEMACSDIR=$(TEST_DIR) emacs -Q -batch -l ert \
 		$(addprefix -l $(EMACS_DIR)/, $(LOAD_FILES)) \
 		$(addprefix -l $(TEST_DIR)/, $(FUNC_TEST_FILES)) \
 		-f ert-run-tests-batch-and-exit

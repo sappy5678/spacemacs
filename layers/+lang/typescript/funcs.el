@@ -1,6 +1,6 @@
-;;; funcs.el --- TypeScript  Layer functions File for Spacemacs
+;;; funcs.el --- TypeScript  Layer functions File for Spacemacs  -*- lexical-binding: nil; -*-
 ;;
-;; Copyright (c) 2012-2021 Sylvain Benner & Contributors
+;; Copyright (c) 2012-2025 Sylvain Benner & Contributors
 ;;
 ;; Author: Sylvain Benner <sylvain.benner@gmail.com>
 ;; URL: https://github.com/syl20bnr/spacemacs
@@ -50,7 +50,7 @@
       (progn
         (unless typescript-lsp-linter
           (setq-local lsp-diagnostics-provider :none))
-        (lsp))
+        (lsp-deferred))
     (message (concat "`lsp' layer is not installed, "
                      "please add `lsp' layer to your dotfile."))))
 
@@ -94,11 +94,9 @@
                     (goto-char p)
                     (message "formatted.")
                     (kill-buffer outputbuf))
-                (progn
-                  (message "Formatting failed!")
-                  (display-buffer outputbuf)))
-              (progn
-                (delete-file tmpfile)))))
+                (message "Formatting failed!")
+                (display-buffer outputbuf))
+              (delete-file tmpfile))))
     (error "tsfmt not found. Run \"npm install -g typescript-formatter\"")))
 
 (defun spacemacs/typescript-format ()

@@ -11,6 +11,7 @@
 - [[#auto-compile][Auto-compile]]
 - [[#working-with-lisp-files-barfage-slurpage--more][Working with lisp files (barfage, slurpage & more)]]
 - [[#debugging-elisp][Debugging Elisp]]
+  - [[#using-the-inspector][Using the inspector]]
 - [[#nameless][Nameless]]
   - [[#aliases][Aliases]]
 - [[#structurally-safe-editing][Structurally safe editing]]
@@ -20,6 +21,7 @@
   - [[#format-code][Format code]]
   - [[#debugging][Debugging]]
   - [[#refactoring-with-emr][Refactoring with emr]]
+  - [[#inspector][Inspector]]
 
 * Description
 This layer gathers all the configuration related to emacs-lisp. This should
@@ -37,6 +39,7 @@ always be in your dotfile, it is not recommended to uninstall it.
 - Nameless package prefix with optional [[https://github.com/Malabarba/Nameless][nameless]]
 - Structurally safe editing using optional [[https://github.com/luxbock/evil-cleverparens][evil-cleverparens]]
 - Visual feedback when evaluation using [[https://github.com/hchbaw/eval-sexp-fu.el][eval-sexp-fu]]
+- Provide Emacs Lisp API usage examples using [[https://github.com/xuchunyang/elisp-demos][elisp-demos]]
 
 * Install
 To use this configuration layer, add it to your =~/.spacemacs=. You will need to
@@ -63,7 +66,7 @@ supports slurpage, barfage and more tools you'll likely want when working with
 lisp.
 
 As this state works the same for all files, the documentation is in global
-[[https://github.com/syl20bnr/spacemacs/blob/master/doc/DOCUMENTATION.org#lisp-key-bindings][DOCUMENTATION.org]]. In general, use ~SPC k~ to interact with the lisp-state.
+[[https://github.com/syl20bnr/spacemacs/blob/develop/doc/DOCUMENTATION.org#lisp-key-bindings][DOCUMENTATION.org]]. In general, use ~SPC k~ to interact with the lisp-state.
 
 * Debugging Elisp
 Here is an interactive quick start to debug Emacs Lisp from an =emacs-lisp-mode= buffer.
@@ -74,7 +77,7 @@ layer documentation file in Spacemacs using ~SPC h l emacs-lisp RET~. This will
 open the current file in =space-doc-mode=. Toggle off =space-doc-mode= using =,
 T V= so that Spacemacs will switch to =org-mode=. Now you can place the cursor
 somewhere inside the code block and press ~, '~ to open the code in an
-interactive =emacs-lisp-buffer=. 
+interactive =emacs-lisp-buffer=.
 
 #+BEGIN_SRC elisp
   (defun helloworld (name)
@@ -107,6 +110,10 @@ displayed in the mode line.
 
 function or press ~o~ to go out of it.
 6) Press ~a~ to stop debugging.
+
+** Using the inspector
+This layer adds the [[https://github.com/mmontone/emacs-inspector][inspector]] package to provide an easy way for inspecting
+data structures. Find more information about its usage [[https://github.com/mmontone/emacs-inspector][here]] and see key bindings.
 
 * Nameless
 Nameless hides package namespaces in your emacs-lisp code, and replaces it by
@@ -207,14 +214,16 @@ If =smartparens= is used the following additional key bindings are available:
 | ~SPC m e s~ | evaluate symbol around point |
 
 ** Format code
-The [[https://github.com/syl20bnr/spacemacs/blob/develop/layers/%2Bemacs/semantic/README.org][semantic]] layer should be installed for these key bindings to become active.
+Code formatting is provided by spacemacs core. In addition formatting with
+semantic can be used if the [[https://github.com/syl20bnr/spacemacs/blob/develop/layers/%2Bemacs/semantic/README.org][semantic]] layer is installed.
 
-| Key binding | Description             |
-|-------------+-------------------------|
-| ~SPC m = b~ | format current buffer   |
-| ~SPC m = d~ | format current function |
-| ~SPC m = o~ | format all on one line  |
-| ~SPC m = s~ | format current sexp     |
+| Key binding | Description                                   |
+|-------------+-----------------------------------------------|
+| ~SPC m = =~ | format current buffer or region with the core |
+| ~SPC m = b~ | format current buffer with semantic           |
+| ~SPC m = d~ | format current function with semantic         |
+| ~SPC m = o~ | format all on one line with semantic          |
+| ~SPC m = s~ | format current sexp with semantic             |
 
 ** Debugging
 To start debugging:
@@ -306,3 +315,16 @@ line)
 | ~SPC m r d l~ | delete let binding form   |
 | ~SPC m r d d~ | delete unused definition  |
 | ~SPC m e w~   | eval and replace          |
+
+** Inspector
+*inspector buffer*
+
+| Key binding | Description                 |
+|-------------+-----------------------------|
+| ~RET~       | inspect object              |
+| ~L~         | navigate to previous object |
+| ~q~         | quit inspector              |
+
+*backtrace buffer*
+
+| ~i~ | inspect object |

@@ -1,6 +1,6 @@
-;;; layers.el --- Lua Layer declarations File for Spacemacs
+;;; layers.el --- Lua Layer declarations File for Spacemacs  -*- lexical-binding: t; -*-
 ;;
-;; Copyright (c) 2012-2021 Sylvain Benner & Contributors
+;; Copyright (c) 2012-2025 Sylvain Benner & Contributors
 ;;
 ;; Author: Lin Sun <sunlin7@yahoo.com>
 ;; URL: https://github.com/syl20bnr/spacemacs
@@ -21,6 +21,6 @@
 ;; along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 
-(when (and (boundp 'lua-backend)
-           (eq lua-backend 'lsp))
-  (configuration-layer/declare-layer-dependencies '(lsp)))
+(cl-case (bound-and-true-p lua-backend)
+  (eglot (configuration-layer/declare-layer-dependencies '(eglot)))
+  (lsp (configuration-layer/declare-layer-dependencies '(lsp))))

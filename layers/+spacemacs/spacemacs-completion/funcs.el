@@ -1,6 +1,6 @@
-;;; funcs.el --- Spacemacs Completion Layer functions File for Spacemacs
+;;; funcs.el --- Spacemacs Completion Layer functions File for Spacemacs  -*- lexical-binding: nil; -*-
 ;;
-;; Copyright (c) 2012-2021 Sylvain Benner & Contributors
+;; Copyright (c) 2012-2025 Sylvain Benner & Contributors
 ;;
 ;; Author: Sylvain Benner <sylvain.benner@gmail.com>
 ;; URL: https://github.com/syl20bnr/spacemacs
@@ -40,21 +40,12 @@
     (setq cursor-in-non-selected-windows nil)))
 
 (defun spacemacs//set-dotted-directory ()
-  "Set the face of diretories for `.' and `..'"
+  "Set the face of directories for `.' and `..'"
   (set-face-attribute 'helm-ff-dotted-directory
                       nil
-                      :foreground nil
-                      :background nil
+                      :foreground 'unspecified
+                      :background 'unspecified
                       :inherit 'helm-ff-directory))
-
-(defun spacemacs//helm-make-source (f &rest args)
-  "Function to be used as advice to activate fuzzy matching for all sources."
-  (let ((source-type (cadr args))
-        (props (cddr args)))
-    ;; fuzzy matching is not supported in async sources
-    (unless (child-of-class-p source-type helm-source-async)
-      (plist-put props :fuzzy-match (eq 'always helm-use-fuzzy))))
-  (apply f args))
 
 (defun spacemacs//helm-find-files-enable-helm--in-fuzzy ()
   "Enabling `helm--in-fuzzy' with the hook:
@@ -98,9 +89,7 @@ When searching in the helm-find-files (`SPC f f') actions (`C-z')."
 (defun spacemacs//helm-hjkl-navigation (style)
   "Set navigation on 'hjkl' for the given editing STYLE."
   (cond
-   ((or (eq 'vim style)
-        (and (eq 'hybrid style)
-             hybrid-style-enable-hjkl-bindings))
+   ((spacemacs//support-hjkl-navigation-p style)
     (define-key helm-map (kbd "C-j") 'helm-next-line)
     (define-key helm-map (kbd "C-k") 'helm-previous-line)
     (define-key helm-map (kbd "C-S-j") 'helm-follow-action-forward)
@@ -205,21 +194,32 @@ See https://github.com/syl20bnr/spacemacs/issues/3700"
   (call-interactively 'helm-select-action)
   (spacemacs//helm-navigation-ts-set-face))
 
+(defun spacemacs//helm-update-header-line-faces ()
+  "Update defaults for `helm' header line whenever a new theme is loaded."
+  ;; TODO factorize face definition with those defined in config.el
+  (setq helm-source-header-default-foreground
+        (face-attribute 'helm-source-header :foreground)
+        helm-source-header-default-background
+        (face-attribute 'helm-source-header :background)
+        helm-source-header-default-box
+        (face-attribute 'helm-source-header :box)
+        helm-source-header-default-height
+        (face-attribute 'helm-source-header :height)))
+
 
 ;; Ivy
 
 (defun spacemacs//ivy-hjkl-navigation (style)
   "Set navigation on 'hjkl' for the given editing STYLE."
   (cond
-   ((or (eq 'vim style)
-        (and (eq 'hybrid style)
-             hybrid-style-enable-hjkl-bindings))
+   ((spacemacs//support-hjkl-navigation-p style)
     (dolist (map (list ivy-minibuffer-map
                        ivy-switch-buffer-map
                        ivy-reverse-i-search-map))
       (define-key map (kbd "C-j") 'ivy-next-line)
       (define-key map (kbd "C-k") 'ivy-previous-line))
     (define-key ivy-minibuffer-map (kbd "C-h") (kbd "DEL"))
+    (define-key counsel-find-file-map (kbd "C-h") 'counsel-up-directory)
     ;; Move C-h to C-S-h
     (define-key ivy-minibuffer-map (kbd "C-S-h") help-map)
     (define-key ivy-minibuffer-map (kbd "C-l") 'ivy-alt-done)

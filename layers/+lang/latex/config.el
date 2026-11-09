@@ -1,6 +1,6 @@
-;;; config.el --- Latex Layer Configuration File for Spacemacs
+;;; config.el --- Latex Layer Configuration File for Spacemacs  -*- lexical-binding: nil; -*-
 ;;
-;; Copyright (c) 2012-2021 Sylvain Benner & Contributors
+;; Copyright (c) 2012-2025 Sylvain Benner & Contributors
 ;;
 ;; Author: Sylvain Benner <sylvain.benner@gmail.com>
 ;; URL: https://github.com/syl20bnr/spacemacs
@@ -31,6 +31,20 @@
 ;; ...but AUCTeX runs LaTeX-mode-hook rather than latex-mode-hook, so:
 (add-to-list 'spacemacs-jump-handlers-latex-mode 'LaTeX-mode-hook)
 
+(defvar latex-view-with-pdf-tools (configuration-layer/layer-used-p 'pdf)
+  "Use pdf-tools for viewing latex output pdf's.
+When the pdf layer is installed, then automatically configure
+Spacemacs to view latex output pdf's with pdf-tools. For using a
+different viewer set this value to `nil' and configure the
+output-pdf viewer in `TeX-view-program-selection'.")
+
+(defvar latex-view-pdf-in-split-window nil
+  "If non-nil then open pdf in split window.
+Requires pdf-tools to be configured as output-pdf viewer.
+
+If the window splits vertically, but is intended to split
+horizontally, consider lowering the value of `split-width-threshold'.")
+
 (defvar latex-backend (if (configuration-layer/layer-used-p 'lsp) 'lsp 'company-auctex)
   "The backend to use for IDE features.
 Possible values are `lsp' and `company-auctex'.
@@ -60,7 +74,10 @@ Allowed values are defined in `TeX-engine-alist'. The default allowed values are
   "Whether to use `TeX-fold-mode' or not in tex/latex buffers.")
 
 (defvar latex-enable-magic nil
-  "Whether to enable \"magic\" symbols in the buffer.")
+  "Whether to enable \"magic\" symbols in the buffer.
+
+Note that enabling this can have a negative impact on performance,
+especially when `magic-latex-enable-pretty-symbols' is t (the default).")
 
 (defvar latex-nofill-env '("equation"
                            "equation*"
@@ -74,4 +91,4 @@ Allowed values are defined in `TeX-engine-alist'. The default allowed values are
   "List of environment names in which `auto-fill-mode' will be inhibited.")
 
 (defvar latex-refresh-preview nil
-  "Whether non-nil, refresh the preview buffer when file changes.")
+  "When non-nil, refresh the preview buffer after recompilation.")

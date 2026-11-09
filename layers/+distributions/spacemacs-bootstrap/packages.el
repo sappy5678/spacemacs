@@ -1,6 +1,6 @@
-;;; packages.el --- Mandatory Bootstrap Layer packages File
+;;; packages.el --- Mandatory Bootstrap Layer packages File  -*- lexical-binding: t; -*-
 ;;
-;; Copyright (c) 2012-2021 Sylvain Benner & Contributors
+;; Copyright (c) 2012-2025 Sylvain Benner & Contributors
 ;;
 ;; Author: Sylvain Benner <sylvain.benner@gmail.com>
 ;; URL: https://github.com/syl20bnr/spacemacs
@@ -21,29 +21,30 @@
 ;; along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 
-(setq spacemacs-bootstrap-packages
-      '(
-        ;; bootstrap packages,
-        ;; `use-package' cannot be used for bootstrap packages configuration
-        (async :step bootstrap)
-        (bind-map :step bootstrap)
-        (bind-key :step bootstrap)
-        (diminish :step bootstrap)
-        (evil :step bootstrap)
-        (hydra :step bootstrap)
-        (use-package :step bootstrap)
-        (which-key :step bootstrap)
-        ;; pre packages, initialized after the bootstrap packages
-        ;; these packages can use use-package
-        (dotenv-mode :step pre)
-        (evil-evilified-state :location local :step pre :protected t)
-        (pcre2el :step pre)
-        (holy-mode :location local :step pre)
-        (hybrid-mode :location (recipe :fetcher local) :step pre)
-        (spacemacs-theme :location built-in)
-        dash))
-
-
+(defconst spacemacs-bootstrap-packages
+  '(
+    ;; bootstrap packages,
+    ;; `use-package' cannot be used for bootstrap packages configuration
+    (async :step bootstrap)
+    (bind-map :step bootstrap)
+    (bind-key :step bootstrap)
+    (diminish :step bootstrap)
+    (evil :step bootstrap)
+    (hydra :step bootstrap)
+    (use-package :step bootstrap)
+    (which-key :step bootstrap)
+    ;; pre packages, initialized after the bootstrap packages
+    ;; these packages can use use-package
+    (dotenv-mode :step pre)
+    (evil-evilified-state :location (recipe :fetcher local) :step pre :protected t)
+    (pcre2el :step pre)
+    (holy-mode :location (recipe :fetcher local) :step pre)
+    (hybrid-mode :location (recipe :fetcher local) :step pre)
+    (spacemacs-theme :location built-in)
+    (which-key-posframe :step pre :toggle (and (consp dotspacemacs-which-key-position)
+                                               (eq (car dotspacemacs-which-key-position) 'posframe)))
+    dash
+    (transient :location elpa)))
 
 ;; bootstrap packages
 
@@ -75,16 +76,12 @@
   (add-hook 'spacemacs-editing-style-hook 'spacemacs/set-evil-search-module)
 
   ;; evil-mode is mandatory for Spacemacs to work properly
-  ;; evil must be require explicitly, the autoload seems to not
+  ;; evil must be required explicitly, the autoload seems to not
   ;; work properly sometimes.
-  ;; `evil-collection' wants this value
-  (setq evil-want-keybinding nil)
   (require 'evil)
   (evil-mode 1)
 
-  (when (and (fboundp 'evil-set-undo-system)
-             (configuration-layer/package-used-p 'undo-tree))
-    (evil-set-undo-system 'undo-tree))
+  (customize-set-variable 'evil-undo-system dotspacemacs-undo-system)
 
   ;; Use evil as a default jump handler
   (add-to-list 'spacemacs-default-jump-handlers 'evil-goto-definition)
@@ -112,8 +109,8 @@
   ;; Make set-selective-display more discoverable to Evil folks
   (define-key evil-normal-state-map "z$" 'spacemacs/toggle-selective-display)
   ;; toggle maximize buffer
-  (define-key evil-window-map (kbd "o") 'spacemacs/toggle-maximize-buffer)
-  (define-key evil-window-map (kbd "C-o") 'spacemacs/toggle-maximize-buffer)
+  (define-key evil-window-map (kbd "o") 'spacemacs/toggle-maximize-window)
+  (define-key evil-window-map (kbd "C-o") 'spacemacs/toggle-maximize-window)
   ;; make cursor keys work
   (define-key evil-window-map (kbd "<left>") 'evil-window-left)
   (define-key evil-window-map (kbd "<right>") 'evil-window-right)
@@ -146,6 +143,21 @@
   (when vim-style-visual-line-move-text
     (define-key evil-visual-state-map "J" 'drag-stuff-down)
     (define-key evil-visual-state-map "K" 'drag-stuff-up))
+
+  ;; Fix broken artist-mode under evil-mode
+  (with-eval-after-load 'artist
+    (evil-make-intercept-map artist-mode-map))
+
+  ;; evil-refresh-cursor is called as part of the window-configuration-change-hook
+  ;; and seems to induce performance problems
+  (with-eval-after-load 'pdf-view
+    (advice-add 'evil-refresh-cursor :around #'spacemacs/not-in-pdf-view-mode))
+
+  (when vim-style-enable-undo-region
+    (define-key evil-visual-state-map (kbd "u")
+                (if (eq dotspacemacs-undo-system 'undo-fu)
+                    'undo
+                  'evil-undo)))
 
   (evil-ex-define-cmd "enew" 'spacemacs/new-empty-buffer)
 
@@ -228,9 +240,11 @@
   (spacemacs|define-transient-state paste
     :title "Pasting Transient State"
     :doc "\n[%s(length kill-ring-yank-pointer)/%s(length kill-ring)] \
- [_C-j_/_C-k_] cycles through yanked text, [_p_/_P_] pastes the same text \
- above or below. Anything else exits."
+ [_C-j_/_C-k_] cycles through yanked text, [_p_/_P_] pastes the \
+ same text above or below, [_C-v_] creates a visual selection \
+ from last paste and exits. Anything else exits."
     :bindings
+    ("C-v" (evil-active-region) :exit t)
     ("C-j" evil-paste-pop)
     ("C-k" evil-paste-pop-next)
     ("p" evil-paste-after)
@@ -239,9 +253,9 @@
 
   (when dotspacemacs-enable-paste-transient-state
     (define-key evil-normal-state-map
-      "p" 'spacemacs/paste-transient-state/evil-paste-after)
+                "p" 'spacemacs/paste-transient-state/evil-paste-after)
     (define-key evil-normal-state-map
-      "P" 'spacemacs/paste-transient-state/evil-paste-before))
+                "P" 'spacemacs/paste-transient-state/evil-paste-before))
   ;; fold transient state
   (when (eq 'evil dotspacemacs-folding-method)
     (spacemacs|define-transient-state fold
@@ -289,6 +303,11 @@
     (list (point-min) (point-max)))
   (define-key evil-inner-text-objects-map "g" 'evil-inner-buffer)
 
+  ;; special-mode buffers are read-only and therefore should open in
+  ;; motion-state (evilified state is too aggressive, e.g. evil-local-set-key
+  ;; has no effect)
+  (add-to-list 'evil-motion-state-modes 'special-mode)
+
   ;; turn off evil in corelv buffers
   (add-to-list 'evil-buffer-regexps '("\\*LV\\*"))
 
@@ -297,16 +316,16 @@
   ;; `spacemacs/counsel-find-file' more `M-o' actions
   (with-eval-after-load 'dired
     (define-key dired-mode-map "j"
-      (cond ((configuration-layer/layer-used-p 'helm) 'spacemacs/helm-find-files)
-            ((configuration-layer/layer-used-p 'ivy) 'spacemacs/counsel-find-file))))
+                (cond ((configuration-layer/layer-used-p 'helm) 'spacemacs/helm-find-files)
+                      ((configuration-layer/layer-used-p 'ivy) 'spacemacs/counsel-find-file))))
 
-  ;; support smart 1parens-strict-mode
+  ;; support smartparens-strict-mode
   (when (configuration-layer/package-used-p 'smartparens)
-    (defadvice evil-delete-backward-char-and-join
-        (around spacemacs/evil-delete-backward-char-and-join activate)
+    (define-advice evil-delete-backward-char-and-join
+        (:around (f &rest args) spacemacs/evil-delete-backward-char-and-join)
       (if (bound-and-true-p smartparens-strict-mode)
           (call-interactively 'sp-backward-delete-char)
-        ad-do-it)))
+        (apply f args))))
 
   ;; Define history commands for comint
   (when (eq dotspacemacs-editing-style 'vim)
@@ -327,13 +346,7 @@
         hydra-head-format "[%s] "))
 
 (defun spacemacs-bootstrap/init-use-package ()
-  (require 'use-package)
-  (setq use-package-verbose init-file-debug
-        ;; inject use-package hooks for easy customization of stock package
-        ;; configuration
-        use-package-inject-hooks t)
-  (add-to-list 'use-package-keywords :spacebind t)
-  (add-to-list 'use-package-keywords :spacediminish t))
+  (spacemacs/use-package-extend))
 
 (defun spacemacs-bootstrap/init-which-key ()
   (require 'which-key)
@@ -346,11 +359,9 @@
         which-key-max-description-length 32
         which-key-max-display-columns nil
         which-key-min-display-lines 6
-        which-key-prevent-C-h-from-cycling t
         which-key-sort-order 'which-key-prefix-then-key-order
         which-key-sort-uppercase-first nil
         which-key-special-keys nil
-        which-key-use-C-h-for-paging t
         which-key-allow-evil-operators t)
 
   (spacemacs|add-toggle which-key
@@ -409,11 +420,6 @@ Press \\[which-key-toggle-persistent] to hide."
 
   (spacemacs/set-leader-keys "hk" 'which-key-show-top-level)
 
-  ;; Needed to avoid nil variable error before update to recent which-key
-  (defvar which-key-replacement-alist nil)
-  ;; Reset to the default or customized value before adding our values in order
-  ;; to make this initialization code idempotent.
-  (custom-reevaluate-setting 'which-key-replacement-alist)
   ;; Replace rules for better naming of functions
   (let ((new-descriptions
          ;; being higher in this list means the replacement is applied later
@@ -429,155 +435,186 @@ Press \\[which-key-toggle-persistent] to hide."
            ("evil-lisp-state-\\(.+\\)" . "\\1")
            ("helm-mini\\|ivy-switch-buffer" . "list-buffers")
            ("lazy-helm/\\(.+\\)" . "\\1")
-           ("lazy-helm/spacemacs/\\(.+\\)" . "\\1"))))
+           ("lazy-helm/spacemacs/\\(.+\\)" . "\\1")
+           ("spacemacs-cmds" . "root"))))
 
     (dolist (nd new-descriptions)
       ;; ensure the target matches the whole string
-      (push (cons (cons nil (concat "\\`" (car nd) "\\'")) (cons nil (cdr nd)))
-            which-key-replacement-alist)))
+      (cl-pushnew (cons (cons nil (concat "\\`" (car nd) "\\'")) (cons nil (cdr nd)))
+                  which-key-replacement-alist
+                  :test #'equal)))
 
   ;; Group together sequence and identical key entries in the which-key popup
   ;; SPC h k- Top-level bindings
   ;; Remove spaces around the two dots ".."
-  (push '(("\\(.*\\)1 .. 9" . "digit-argument") .
-          ("\\11..9" . "digit-argument"))
-        which-key-replacement-alist)
+  (cl-pushnew '(("\\(.*\\)1 .. 9" . "digit-argument") .
+                ("\\11..9" . "digit-argument"))
+              which-key-replacement-alist
+              :test #'equal)
 
   ;; And remove the modifier key(s) before the last nr in the sequence
-  (push '(("\\(.*\\)C-0 .. C-5" . "digit-argument") .
-          ("\\1C-0..5" . "digit-argument"))
-        which-key-replacement-alist)
+  (cl-pushnew '(("\\(.*\\)C-0 .. C-5" . "digit-argument") .
+                ("\\1C-0..5" . "digit-argument"))
+              which-key-replacement-alist
+              :test #'equal)
 
-  (push '(("\\(.*\\)C-7 .. C-9" . "digit-argument") .
-          ("\\1C-7..9" . "digit-argument"))
-        which-key-replacement-alist)
+  (cl-pushnew '(("\\(.*\\)C-7 .. C-9" . "digit-argument") .
+                ("\\1C-7..9" . "digit-argument"))
+              which-key-replacement-alist
+              :test #'equal)
 
-  (push '(("\\(.*\\)C-M-0 .. C-M-9" . "digit-argument") .
-          ("\\1C-M-0..9" . "digit-argument"))
-        which-key-replacement-alist)
+  (cl-pushnew '(("\\(.*\\)C-M-0 .. C-M-9" . "digit-argument") .
+                ("\\1C-M-0..9" . "digit-argument"))
+              which-key-replacement-alist
+              :test #'equal)
 
   ;; Rename the entry for M-0 in the SPC h k Top-level bindings,
   ;; and for 0 in the SPC- Spacemacs root
-  (push '(("\\(.*\\)0" . "winum-select-window-0-or-10") .
-          ("\\10" . "select window 0 or 10"))
-        which-key-replacement-alist)
+  (cl-pushnew '(("\\(.*\\)0" . "winum-select-window-0-or-10") .
+                ("\\10" . "select window 0 or 10"))
+              which-key-replacement-alist
+              :test #'equal)
 
   ;; Rename the entry for M-1 in the SPC h k Top-level bindings,
   ;; and for 1 in the SPC- Spacemacs root, to 1..9
-  (push '(("\\(.*\\)1" . "winum-select-window-1") .
-          ("\\11..9" . "select window 1..9"))
-        which-key-replacement-alist)
+  (cl-pushnew '(("\\(.*\\)1" . "winum-select-window-1") .
+                ("\\11..9" . "select window 1..9"))
+              which-key-replacement-alist
+              :test #'equal)
 
   ;; Hide the entries for M-[2-9] in the SPC h k Top-level bindings,
   ;; and for [2-9] in the SPC- Spacemacs root
-  (push '((nil . "winum-select-window-[2-9]") . t)
-        which-key-replacement-alist)
+  (cl-pushnew '((nil . "winum-select-window-[2-9]") . t)
+              which-key-replacement-alist
+              :test #'equal)
 
   ;; SPC- Spacemacs root
   ;; Combine the ` (backtick) and ² (superscript 2) key entries
-  (push '(("\\(.*\\)`" . "winum-select-window-by-number") .
-          ("\\1`,²" . "select window by number"))
-        which-key-replacement-alist)
+  (cl-pushnew '(("\\(.*\\)`" . "winum-select-window-by-number") .
+                ("\\1`,²" . "select window by number"))
+              which-key-replacement-alist
+              :test #'equal)
 
   ;; hide the "² -> winum-select-window-by-number" entry
-  (push '(("\\(.*\\)²" . nil) . t)
-        which-key-replacement-alist)
+  (cl-pushnew '(("\\(.*\\)²" . nil) . t)
+              which-key-replacement-alist
+              :test #'equal)
 
   ;; SPC b- buffers
   ;; rename the buffer-to-window-1 entry, to 1..9
-  (push '(("\\(.*\\)1" . "Move buffer to window 1") .
-          ("\\11..9" . "Move buffer to window 1..9"))
-        which-key-replacement-alist)
+  (cl-pushnew '(("\\(.*\\)1" . "Move buffer to window 1") .
+                ("\\11..9" . "Move buffer to window 1..9"))
+              which-key-replacement-alist
+              :test #'equal)
 
   ;; hide the "[2-9] -> buffer-to-window-[2-9]" entries
-  (push '((nil . "Move buffer to window [2-9]") . t)
-        which-key-replacement-alist)
+  (cl-pushnew '((nil . "Move buffer to window [2-9]") . t)
+              which-key-replacement-alist
+              :test #'equal)
 
   ;; SPC k- lisp
   ;; rename "1 .. 9 -> digit-argument" to "1..9 -> digit-argument"
-  (push '(("\\(.*\\)1 .. 9" . "evil-lisp-state-digit-argument") .
-          ("\\11..9" . "digit-argument"))
-        which-key-replacement-alist)
+  (cl-pushnew '(("\\(.*\\)1 .. 9" . "evil-lisp-state-digit-argument") .
+                ("\\11..9" . "digit-argument"))
+              which-key-replacement-alist
+              :test #'equal)
 
   ;; SPC n- narrow/numbers
   ;; Combine + and =
-  (push '(("\\(.*\\)+" . "evil-numbers/inc-at-pt") .
-          ("\\1+,=" . "evil-numbers/inc-at-pt"))
-        which-key-replacement-alist)
+  (cl-pushnew '(("\\(.*\\)+" . "evil-numbers/inc-at-pt") .
+                ("\\1+,=" . "evil-numbers/inc-at-pt"))
+              which-key-replacement-alist
+              :test #'equal)
 
   ;; hide "= -> evil-numbers/inc-at-pt" entry
-  (push '(("\\(.*\\)=" . "evil-numbers/inc-at-pt") . t)
-        which-key-replacement-alist)
+  (cl-pushnew '(("\\(.*\\)=" . "evil-numbers/inc-at-pt") . t)
+              which-key-replacement-alist
+              :test #'equal)
 
   ;; Combine - and _
-  (push '(("\\(.*\\)-" . "evil-numbers/dec-at-pt") .
-          ("\\1-,_" . "evil-numbers/dec-at-pt"))
-        which-key-replacement-alist)
+  (cl-pushnew '(("\\(.*\\)-" . "evil-numbers/dec-at-pt") .
+                ("\\1-,_" . "evil-numbers/dec-at-pt"))
+              which-key-replacement-alist
+              :test #'equal)
 
   ;; hide "_ -> evil-numbers/dec-at-pt" entry
-  (push '(("\\(.*\\)_" . "evil-numbers/dec-at-pt") . t)
-        which-key-replacement-alist)
+  (cl-pushnew '(("\\(.*\\)_" . "evil-numbers/dec-at-pt") . t)
+              which-key-replacement-alist
+              :test #'equal)
 
   ;; SPC x i- inflection
   ;; rename "k -> string-inflection-kebab-case"
   ;; to "k,- -> string-inflection-kebab-case"
-  (push '(("\\(.*\\)k" . "string-inflection-kebab-case") .
-          ("\\1k,-" . "string-inflection-kebab-case"))
-        which-key-replacement-alist)
+  (cl-pushnew '(("\\(.*\\)k" . "string-inflection-kebab-case") .
+                ("\\1k,-" . "string-inflection-kebab-case"))
+              which-key-replacement-alist
+              :test #'equal)
 
   ;; hide the "- -> string-inflection-kebab-case" entry
-  (push '(("\\(.*\\)-" . "string-inflection-kebab-case") . t)
-        which-key-replacement-alist)
+  (cl-pushnew '(("\\(.*\\)-" . "string-inflection-kebab-case") . t)
+              which-key-replacement-alist
+              :test #'equal)
 
   ;; rename "u -> string-inflection-underscore"
   ;; to "u,_ -> string-inflection-underscore"
-  (push '(("\\(.*\\)u" . "string-inflection-underscore") .
-          ("\\1u,_" . "string-inflection-underscore"))
-        which-key-replacement-alist)
+  (cl-pushnew '(("\\(.*\\)u" . "string-inflection-underscore") .
+                ("\\1u,_" . "string-inflection-underscore"))
+              which-key-replacement-alist
+              :test #'equal)
 
   ;; hide the "_ -> string-inflection-underscore" entry
-  (push '(("\\(.*\\)_" . "string-inflection-underscore") . t)
-        which-key-replacement-alist)
+  (cl-pushnew '(("\\(.*\\)_" . "string-inflection-underscore") . t)
+              which-key-replacement-alist
+              :test #'equal)
 
   ;; C-c C-w-
   ;; rename the eyebrowse-switch-to-window-config-0 entry, to 0..9
-  (push '(("\\(.*\\)0" . "eyebrowse-switch-to-window-config-0") .
-          ("\\10..9" . "eyebrowse-switch-to-window-config-0..9"))
-        which-key-replacement-alist)
+  (cl-pushnew '(("\\(.*\\)0" . "eyebrowse-switch-to-window-config-0") .
+                ("\\10..9" . "eyebrowse-switch-to-window-config-0..9"))
+              which-key-replacement-alist
+              :test #'equal)
 
   ;; hide the "[1-9] -> eyebrowse-switch-to-window-config-[1-9]" entries
-  (push '((nil . "eyebrowse-switch-to-window-config-[1-9]") . t)
-        which-key-replacement-alist)
+  (cl-pushnew '((nil . "eyebrowse-switch-to-window-config-[1-9]") . t)
+              which-key-replacement-alist
+              :test #'equal)
 
   ;; Combine the c and C-c key entries
-  (push '(("\\(.*\\)C-c C-w c" . "eyebrowse-create-window-config") .
-          ("\\1c,C-c" . "eyebrowse-create-window-config"))
-        which-key-replacement-alist)
+  (cl-pushnew '(("\\(.*\\)C-c C-w c" . "eyebrowse-create-window-config") .
+                ("\\1c,C-c" . "eyebrowse-create-window-config"))
+              which-key-replacement-alist
+              :test #'equal)
 
   ;; hide the "C-c -> eyebrowse-create-window-config" entry
-  (push '(("\\(.*\\)C-c C-w C-c" . "eyebrowse-create-window-config") . t)
-         which-key-replacement-alist)
+  (cl-pushnew '(("\\(.*\\)C-c C-w C-c" . "eyebrowse-create-window-config") . t)
+              which-key-replacement-alist
+              :test #'equal)
 
   ;; C-c C-d-
   ;; Combine the d and C-d key entries
-  (push '(("\\(.*\\)C-c C-d d" . "elisp-slime-nav-describe-elisp-thing-at-point") .
-          ("\\1d,C-d" . "elisp-slime-nav-describe-elisp-thing-at-point"))
-        which-key-replacement-alist)
+  (cl-pushnew '(("\\(.*\\)C-c C-d d" . "elisp-slime-nav-describe-elisp-thing-at-point") .
+                ("\\1d,C-d" . "elisp-slime-nav-describe-elisp-thing-at-point"))
+              which-key-replacement-alist
+              :test #'equal)
 
   ;; hide the "C-d -> elisp-slime-nav-describe-elisp-thing-at-point" entry
-  (push '(("\\(.*\\)C-c C-d C-d" . "elisp-slime-nav-describe-elisp-thing-at-point") . t)
-         which-key-replacement-alist)
+  (cl-pushnew '(("\\(.*\\)C-c C-d C-d" . "elisp-slime-nav-describe-elisp-thing-at-point") . t)
+              which-key-replacement-alist
+              :test #'equal)
 
-  (which-key-add-key-based-replacements
-    dotspacemacs-leader-key '("root" . "Spacemacs root")
-    dotspacemacs-emacs-leader-key '("root" . "Spacemacs root"))
+  ;; Title shown while the leader key is pending.
+  (dolist (leader (list dotspacemacs-leader-key dotspacemacs-emacs-leader-key))
+    (cl-pushnew (cons (key-description (kbd leader)) "Spacemacs root")
+                which-key--prefix-title-alist
+                :test #'equal))
 
   ;; disable special key handling for spacemacs, since it can be
   ;; disorienting if you don't understand it
-  (pcase dotspacemacs-which-key-position
-    ('right (which-key-setup-side-window-right))
-    ('bottom (which-key-setup-side-window-bottom))
-    ('right-then-bottom (which-key-setup-side-window-right-bottom)))
+  (when (symbolp dotspacemacs-which-key-position)
+    (pcase dotspacemacs-which-key-position
+      ('right (which-key-setup-side-window-right))
+      ('bottom (which-key-setup-side-window-bottom))
+      ('right-then-bottom (which-key-setup-side-window-right-bottom))))
 
   (which-key-mode)
   (spacemacs|diminish which-key-mode " Ⓚ" " K"))
@@ -585,9 +622,7 @@ Press \\[which-key-toggle-persistent] to hide."
 ;; pre packages
 
 (defun spacemacs-bootstrap/init-evil-evilified-state ()
-  (use-package evil-evilified-state)
-  (define-key evil-evilified-state-map (kbd dotspacemacs-leader-key)
-    spacemacs-default-map))
+  (use-package evil-evilified-state))
 
 ;; we own pcre2el here, so that it's always available to ivy and helm
 ;; (necessary when using spacemacs-base distribution)
@@ -595,46 +630,42 @@ Press \\[which-key-toggle-persistent] to hide."
   (use-package pcre2el :defer t))
 
 (defun spacemacs-bootstrap/init-holy-mode ()
-  (spacemacs|unless-dumping-and-eval-after-loaded-dump holy-mode
-    (use-package holy-mode
-      :commands holy-mode
-      :init
-      (progn
-        (when (eq 'emacs dotspacemacs-editing-style)
-          (holy-mode))
-        (spacemacs|add-toggle holy-mode
-          :status holy-mode
-          :on (progn (when (bound-and-true-p hybrid-mode)
-                       (hybrid-mode -1)
-                       (spacemacs/declare-prefix "tEh" "hybrid (hybrid-mode)"))
-                     (holy-mode)
-                     (spacemacs/declare-prefix "tEe" "vim (evil-mode"))
-          :off (progn (holy-mode -1)
-                      (spacemacs/declare-prefix "tEe" "emacs (holy-mode)"))
-          :off-message "evil-mode enabled."
-          :documentation "Globally toggle holy mode."
-          :evil-leader "tEe")
-        (spacemacs|diminish holy-mode " Ⓔe" " Ee")))))
+  (use-package holy-mode
+    :commands holy-mode
+    :init
+    (when (eq 'emacs dotspacemacs-editing-style)
+      (holy-mode))
+    (spacemacs|add-toggle holy-mode
+      :status holy-mode
+      :on (progn (when (bound-and-true-p hybrid-mode)
+                   (hybrid-mode -1)
+                   (spacemacs/declare-prefix "tEh" "hybrid (hybrid-mode)"))
+                 (holy-mode)
+                 (spacemacs/declare-prefix "tEe" "vim (evil-mode)"))
+      :off (progn (holy-mode -1)
+                  (spacemacs/declare-prefix "tEe" "emacs (holy-mode)"))
+      :off-message "evil-mode enabled."
+      :documentation "Globally toggle holy mode."
+      :evil-leader "tEe")
+    (spacemacs|diminish holy-mode " Ⓔe" " Ee")))
 
 (defun spacemacs-bootstrap/init-hybrid-mode ()
-  (spacemacs|unless-dumping-and-eval-after-loaded-dump hybrid-mode
-    (use-package hybrid-mode
-      :config
-      (progn
-        (when (eq 'hybrid dotspacemacs-editing-style) (hybrid-mode))
-        (spacemacs|add-toggle hybrid-mode
-          :status hybrid-mode
-          :on (progn (when (bound-and-true-p holy-mode)
-                       (holy-mode -1)
-                       (spacemacs/declare-prefix "tEe" "emacs (holy-mode)"))
-                     (hybrid-mode)
-                     (spacemacs/declare-prefix "tEh" "vim (evil-mode)"))
-          :off (progn (hybrid-mode -1)
-                      (spacemacs/declare-prefix "tEh" "hybrid (hybrid-mode)"))
-          :off-message "evil-mode enabled."
-          :documentation "Globally toggle hybrid mode."
-          :evil-leader "tEh")
-        (spacemacs|diminish hybrid-mode " Ⓔh" " Eh")))))
+  (use-package hybrid-mode
+    :config
+    (when (eq 'hybrid dotspacemacs-editing-style) (hybrid-mode))
+    (spacemacs|add-toggle hybrid-mode
+      :status hybrid-mode
+      :on (progn (when (bound-and-true-p holy-mode)
+                   (holy-mode -1)
+                   (spacemacs/declare-prefix "tEe" "emacs (holy-mode)"))
+                 (hybrid-mode)
+                 (spacemacs/declare-prefix "tEh" "vim (evil-mode)"))
+      :off (progn (hybrid-mode -1)
+                  (spacemacs/declare-prefix "tEh" "hybrid (hybrid-mode)"))
+      :off-message "evil-mode enabled."
+      :documentation "Globally toggle hybrid mode."
+      :evil-leader "tEh")
+    (spacemacs|diminish hybrid-mode " Ⓔh" " Eh")))
 
 (defun spacemacs-bootstrap/init-spacemacs-theme ()
   (use-package spacemacs-theme
@@ -643,3 +674,28 @@ Press \\[which-key-toggle-persistent] to hide."
 (defun spacemacs-bootstrap/init-dash ()
   (use-package dash
     :defer t))
+
+(defun spacemacs-bootstrap/init-which-key-posframe ()
+  (use-package which-key-posframe
+    :config
+    (setq which-key-posframe-parameters
+          '((left-fringe . 10)
+            (right-fringe . 10)
+            (internal-border-width . 10)  ;; expected to add padding but seems to have no effect
+            ))
+    (setq which-key-posframe-poshandler
+          (intern (format "posframe-poshandler-frame-%s"
+                          (cdr dotspacemacs-which-key-position))))
+    (which-key-posframe-mode)))
+
+(defun spacemacs-bootstrap/init-transient ()
+  (use-package transient
+    :defer t
+    :init
+    (setq-default transient-history-file (expand-file-name "transient/history.el"
+                                                           spacemacs-cache-directory))
+    (setq-default transient-levels-file (expand-file-name "transient/levels.el"
+                                                          spacemacs-cache-directory))
+    ;; Values are the users saved preferences so they should persist.
+    (setq-default transient-values-file (expand-file-name "transient/values.el"
+                                                          dotspacemacs-directory))))

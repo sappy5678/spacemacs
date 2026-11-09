@@ -1,6 +1,6 @@
-;;; funcs.el --- Terraform Layer functions File for Spacemacs
+;;; funcs.el --- Terraform Layer functions File for Spacemacs  -*- lexical-binding: nil; -*-
 ;;
-;; Copyright (c) 2012-2021 Sylvain Benner & Contributors
+;; Copyright (c) 2012-2025 Sylvain Benner & Contributors
 ;;
 ;; Author: Sylvain Benner <sylvain.benner@gmail.com>
 ;; URL: https://github.com/syl20bnr/spacemacs
@@ -36,4 +36,4 @@
 (defun spacemacs//terraform-setup-backend ()
   "Conditionally setup terraform backend."
   (when (eq terraform-backend 'lsp)
-    (lsp)))
+    (lsp-deferred)))
